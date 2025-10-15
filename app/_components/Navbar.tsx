@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { useState, Dispatch, FC, JSX, ReactNode, SetStateAction } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, Dispatch, FC, JSX, ReactNode, SetStateAction } from "react";
 import { FiMenu, FiArrowRight, FiX, FiChevronDown } from "react-icons/fi";
 import { FaUserCircle } from "react-icons/fa";
 
@@ -7,9 +8,64 @@ import { useMotionValueEvent, AnimatePresence, useScroll, motion } from "motion/
 
 import useMeasure from "react-use-measure";
 
+import { createClient } from "@/utils/supabase/client";
+
 export default function Navbar() {
+  const [userID, setUserID] = useState<string>("");
   const [scrolled, setScrolled] = useState(false);
   const { scrollY } = useScroll();
+
+  const router = useRouter();
+
+  useEffect(() => {
+    async function getUser() {
+      try {
+        const supabase = await createClient();
+
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+
+        if (error) {
+          console.error("Error getting user:", error);
+          return;
+        }
+
+        if (user) {
+          setUserID(user.id);
+        }
+      } catch (error) {
+        console.error("Error in getUser:", error);
+      }
+    }
+
+    getUser();
+  }, []);
+
+  async function signOut() {
+    try {
+      const supabase = await createClient();
+
+      if (userID) {
+        const { error: publicError } = await supabase.from("user_profiles").update({ online: false }).eq("id", userID);
+
+        if (publicError) {
+          console.error("Status update failed:", publicError);
+        }
+      }
+
+      const { error: authError } = await supabase.auth.signOut();
+
+      if (authError) {
+        console.error("Error signing out:", authError);
+      } else {
+        router.push("/auth/login");
+      }
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  }
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     setScrolled(latest > 80 ? true : false);
@@ -25,9 +81,9 @@ export default function Navbar() {
         <Logo />
         <div className="hidden gap-6 lg:flex">
           <Links />
-          <CTAs />
+          <LogoutButton onClick={signOut} />
         </div>
-        <MobileMenu />
+        <MobileMenu onClick={signOut} />
       </div>
     </nav>
   );
@@ -95,10 +151,13 @@ const NavLink = ({ children, href, FlyoutContent }: { children: ReactNode; href:
   );
 };
 
-const CTAs = () => {
+const LogoutButton = ({ onClick }: { onClick: () => void }) => {
   return (
     <div className="flex items-center gap-3">
-      <button className="flex items-center gap-2 rounded-lg border-2 border-white px-4 py-2 font-semibold text-white transition-colors hover:bg-white hover:text-black duration-300 ease-in-out cursor-pointer">
+      <button
+        onClick={onClick}
+        className="flex items-center gap-2 rounded-lg border-2 border-white px-4 py-2 font-semibold text-white transition-colors hover:bg-white hover:text-black duration-300 ease-in-out cursor-pointer"
+      >
         <FaUserCircle />
         <span>Logout</span>
       </button>
@@ -165,8 +224,9 @@ const MobileMenuLink = ({ children, href, FoldContent, setMenuOpen }: { children
   );
 };
 
-const MobileMenu = () => {
+const MobileMenu = ({ onClick: signOut }: { onClick: () => void }) => {
   const [open, setOpen] = useState(false);
+
   return (
     <div className="block lg:hidden">
       <button onClick={() => setOpen(true)} className="block text-3xl">
@@ -195,7 +255,7 @@ const MobileMenu = () => {
               ))}
             </div>
             <div className="flex justify-end bg-neutral-950 p-6">
-              <CTAs />
+              <LogoutButton onClick={signOut} />
             </div>
           </motion.nav>
         )}

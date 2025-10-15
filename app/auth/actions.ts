@@ -53,7 +53,7 @@ export async function signup(formData: FormData) {
   if (password !== confirm_password) return { errorMessage: "Passwords do not match!" };
 
   let userCredentials = "user";
-  if (admin_code === process.env.NEXT_PUBLIC_ADMIN_CODE) {
+  if (admin_code === process.env.ADMIN_CODE) {
     userCredentials = "admin";
   }
 
@@ -71,5 +71,5 @@ export async function signup(formData: FormData) {
   if (authError) return { errorMessage: authError.message };
   if (!authData.user) return { errorMessage: "Registration failed." };
 
-  redirect("/");
+  redirect("/auth/check-email");
 }
