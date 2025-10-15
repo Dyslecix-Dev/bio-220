@@ -9,10 +9,14 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = searchParams.get("next") ?? "/";
 
-  const redirectTo = request.nextUrl.clone();
-  redirectTo.pathname = next;
+  if (!tokenHash || !type) {
+    console.error("Missing token_hash or type");
+    const errorUrl = new URL("/auth/error", request.url);
+    errorUrl.searchParams.set("message", "Invalid confirmation link");
+    return NextResponse.redirect(errorUrl);
+  }
 
-  if (tokenHash && type) {
+  try {
     const supabase = await createClient();
 
     const { error } = await supabase.auth.verifyOtp({
@@ -20,12 +24,22 @@ export async function GET(request: NextRequest) {
       token_hash: tokenHash,
     });
 
-    if (!error) {
-      return NextResponse.redirect(redirectTo);
+    if (error) {
+      console.error("OTP verification error:", error);
+      const errorUrl = new URL("/auth/error", request.url);
+      errorUrl.searchParams.set("message", error.message);
+      return NextResponse.redirect(errorUrl);
     }
-  }
 
-  // TODO add a redirect if there is an error
-  // redirectTo.pathname = "/auth/auth-code-error";
-  // return NextResponse.redirect(redirectTo);
+    const redirectUrl = new URL(next, request.url);
+    redirectUrl.searchParams.delete("token_hash");
+    redirectUrl.searchParams.delete("type");
+
+    return NextResponse.redirect(redirectUrl);
+  } catch (error) {
+    console.error("Unexpected error in confirmation route:", error);
+    const errorUrl = new URL("/auth/error", request.url);
+    errorUrl.searchParams.set("message", "An unexpected error occurred");
+    return NextResponse.redirect(errorUrl);
+  }
 }
