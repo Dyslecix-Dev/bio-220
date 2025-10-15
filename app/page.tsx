@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
+import ShuffleLoader from "@/app/_components/ShuffleLoader";
 import Navbar from "@/app/_components/Navbar";
 import GlowingDotsBackground from "@/app/_components/_backgrounds/GlowingDotsBackground";
 import SquishyCard from "@/app/_components/_cards/SquishyCard";
@@ -58,11 +60,10 @@ export default function Home() {
     checkSession();
   }, []);
 
-  // Show loading state
   if (loading) {
     return (
       <main className="min-h-screen overflow-hidden bg-zinc-950 flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+        <ShuffleLoader />
       </main>
     );
   }
