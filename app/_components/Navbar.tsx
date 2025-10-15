@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useState, Dispatch, FC, JSX, ReactNode, SetStateAction } from "react";
 import { FiMenu, FiArrowRight, FiX, FiChevronDown } from "react-icons/fi";
 import { FaUserCircle } from "react-icons/fa";
@@ -11,7 +12,7 @@ export default function Navbar() {
   const { scrollY } = useScroll();
 
   useMotionValueEvent(scrollY, "change", (latest) => {
-    setScrolled(latest > 250 ? true : false);
+    setScrolled(latest > 80 ? true : false);
   });
 
   return (
@@ -34,7 +35,7 @@ export default function Navbar() {
 
 const Logo = ({ color = "white" }) => {
   return (
-    <div className="flex items-center gap-2">
+    <Link href="/" className="flex items-center gap-2">
       <span className="text-2xl font-bold" style={{ color }}>
         Microbiology
       </span>
@@ -42,7 +43,7 @@ const Logo = ({ color = "white" }) => {
         <path d="M16.4992 2H37.5808L22.0816 24.9729H1L16.4992 2Z" stopColor={color} />
         <path d="M17.4224 27.102L11.4192 36H33.5008L49 13.0271H32.7024L23.2064 27.102H17.4224Z" stopColor={color} />
       </svg>
-    </div>
+    </Link>
   );
 };
 
@@ -50,7 +51,7 @@ const Links = () => {
   return (
     <div className="flex items-center gap-6">
       {LINKS.map((l) => (
-        <NavLink key={l.text} href={l.href} FlyoutContent={l.component}>
+        <NavLink key={l.text} href={l.href}>
           {l.text}
         </NavLink>
       ))}
@@ -71,7 +72,7 @@ const NavLink = ({ children, href, FlyoutContent }: { children: ReactNode; href:
           style={{
             transform: showFlyout ? "scaleX(1)" : "scaleX(0)",
           }}
-          className="absolute -bottom-2 -left-2 -right-2 h-1 origin-left scale-x-0 rounded-full bg-indigo-300 transition-transform duration-300 ease-out"
+          className="absolute -bottom-2 -left-2 -right-2 h-1 origin-left scale-x-0 rounded-full bg-indigo-300 transition-transform duration-500 ease-out"
         />
       </a>
       <AnimatePresence>
@@ -97,144 +98,10 @@ const NavLink = ({ children, href, FlyoutContent }: { children: ReactNode; href:
 const CTAs = () => {
   return (
     <div className="flex items-center gap-3">
-      <button className="flex items-center gap-2 rounded-lg border-2 border-white px-4 py-2 font-semibold text-white transition-colors hover:bg-white hover:text-black">
+      <button className="flex items-center gap-2 rounded-lg border-2 border-white px-4 py-2 font-semibold text-white transition-colors hover:bg-white hover:text-black duration-300 ease-in-out cursor-pointer">
         <FaUserCircle />
-        <span>Sign in</span>
+        <span>Logout</span>
       </button>
-      <button className="rounded-lg border-2 border-indigo-300 bg-indigo-300 px-4 py-2 font-semibold text-black transition-colors hover:border-indigo-600 hover:bg-indigo-600 hover:text-white">
-        Schedule a Demo
-      </button>
-    </div>
-  );
-};
-
-const AboutUsContent = () => {
-  return (
-    <div className="grid h-fit w-full grid-cols-12 shadow-xl lg:h-72 lg:w-[600px] lg:shadow-none xl:w-[750px]">
-      <div className="col-span-12 flex flex-col justify-between bg-neutral-950 p-6 lg:col-span-4">
-        <div>
-          <h2 className="mb-2 text-xl font-semibold text-white">About us</h2>
-          <p className="mb-6 max-w-xs text-sm text-neutral-400">Placeholder is the world&apos;s leading placeholder company.</p>
-        </div>
-        <a href="#" className="flex items-center gap-1 text-xs text-indigo-300 hover:underline">
-          Learn more <FiArrowRight />
-        </a>
-      </div>
-      <div className="col-span-12 grid grid-cols-2 grid-rows-2 gap-3 bg-white p-6 lg:col-span-8">
-        <a href="#" className="rounded border-2 border-neutral-200 bg-white p-3 transition-colors hover:bg-neutral-100">
-          <h3 className="mb-1 font-semibold">Features</h3>
-          <p className="text-xs">Lorem ipsum dolor sit amet consectetur adipisicing elit. Sed, quam?</p>
-        </a>
-        <a href="#" className="rounded border-2 border-neutral-200 bg-white p-3 transition-colors hover:bg-neutral-100">
-          <h3 className="mb-1 font-semibold">Testimonials</h3>
-          <p className="text-xs">Lorem ipsum dolor sit amet consectetur adipisicing elit. Sed, quam?</p>
-        </a>
-        <a href="#" className="rounded border-2 border-neutral-200 bg-white p-3 transition-colors hover:bg-neutral-100">
-          <h3 className="mb-1 font-semibold">Press</h3>
-          <p className="text-xs">Lorem ipsum dolor sit amet consectetur adipisicing elit. Sed, quam?</p>
-        </a>
-        <a href="#" className="rounded border-2 border-neutral-200 bg-white p-3 transition-colors hover:bg-neutral-100">
-          <h3 className="mb-1 font-semibold">Blog</h3>
-          <p className="text-xs">Lorem ipsum dolor sit amet consectetur adipisicing elit. Sed, quam?</p>
-        </a>
-      </div>
-    </div>
-  );
-};
-
-const PricingContent = () => {
-  return (
-    <div className="w-full bg-white p-6 shadow-none lg:w-[250px] lg:shadow-xl">
-      <div className="grid grid-cols-2 lg:grid-cols-1">
-        <div className="mb-3 space-y-3">
-          <h3 className="font-semibold">For Individuals</h3>
-          <a href="#" className="block text-sm hover:underline">
-            Introduction
-          </a>
-          <a href="#" className="block text-sm hover:underline">
-            Pay as you go
-          </a>
-        </div>
-        <div className="mb-6 space-y-3">
-          <h3 className="font-semibold">For Companies</h3>
-          <a href="#" className="block text-sm hover:underline">
-            Startups
-          </a>
-          <a href="#" className="block text-sm hover:underline">
-            SMBs
-          </a>
-          <a href="#" className="block text-sm hover:underline">
-            Enterprise
-          </a>
-        </div>
-      </div>
-      <button className="w-full rounded-lg border-2 border-neutral-950 px-4 py-2 font-semibold transition-colors hover:bg-neutral-950 hover:text-white">Contact sales</button>
-    </div>
-  );
-};
-
-const CareersContent = () => {
-  return (
-    <div className="grid w-full grid-cols-12 shadow-xl lg:w-[750px]">
-      <div className="col-span-12 flex flex-col justify-between bg-indigo-600 p-6 lg:col-span-4">
-        <div className="mb-6">
-          <h2 className="mb-2 text-xl font-semibold text-white">Careers</h2>
-          <p className="text-sm text-indigo-100">Placeholder was rated a top place to work by Placeholder.</p>
-        </div>
-        <a href="#" className="flex items-center gap-1 text-xs text-indigo-200 hover:underline">
-          Careers site <FiArrowRight />
-        </a>
-      </div>
-      <div className="col-span-12 grid grid-cols-2 gap-3 bg-white p-6 lg:col-span-8 lg:grid-cols-3">
-        <div className="space-y-3">
-          <h3 className="font-semibold">Business</h3>
-          <a href="#" className="block text-sm hover:underline">
-            Marketing
-          </a>
-          <a href="#" className="block text-sm hover:underline">
-            Finance
-          </a>
-          <a href="#" className="block text-sm hover:underline">
-            Legal
-          </a>
-          <a href="#" className="block text-sm hover:underline">
-            Sales
-          </a>
-        </div>
-        <div className="space-y-3">
-          <h3 className="font-semibold">Engineering</h3>
-          <a href="#" className="block text-sm hover:underline">
-            Full stack
-          </a>
-          <a href="#" className="block text-sm hover:underline">
-            Dev ops
-          </a>
-          <a href="#" className="block text-sm hover:underline">
-            QA
-          </a>
-          <a href="#" className="block text-sm hover:underline">
-            Data
-          </a>
-          <a href="#" className="block text-sm hover:underline">
-            Machine learning
-          </a>
-          <a href="#" className="block text-sm hover:underline">
-            Management
-          </a>
-        </div>
-        <div className="space-y-3">
-          <h3 className="font-semibold">More</h3>
-          <a href="#" className="block text-sm hover:underline">
-            Support
-          </a>
-          <a href="#" className="block text-sm hover:underline">
-            Office
-          </a>
-          <a href="#" className="block text-sm hover:underline">
-            Other
-          </a>
-        </div>
-      </div>
     </div>
   );
 };
@@ -322,7 +189,7 @@ const MobileMenu = () => {
             </div>
             <div className="h-screen overflow-y-scroll bg-neutral-100 p-6">
               {LINKS.map((l) => (
-                <MobileMenuLink key={l.text} href={l.href} FoldContent={l.component} setMenuOpen={setOpen}>
+                <MobileMenuLink key={l.text} href={l.href} setMenuOpen={setOpen}>
                   {l.text}
                 </MobileMenuLink>
               ))}
@@ -338,23 +205,21 @@ const MobileMenu = () => {
 };
 
 const LINKS = [
+  // {
+  //   text: "Contact",
+  //   href: "#",
+  // },
+  // {
+  //   text: "Leaderboard",
+  //   href: "#",
+  // },
   {
-    text: "About us",
-    href: "#",
-    component: AboutUsContent,
-  },
-  {
-    text: "Pricing",
-    href: "#",
-    component: PricingContent,
-  },
-  {
-    text: "Careers",
-    href: "#",
-    component: CareersContent,
-  },
-  {
-    text: "Documentation",
+    text: "FAQ",
     href: "#",
   },
+  // {
+  //   text: "Profile",
+  //   href: "#",
+  // },
 ];
+

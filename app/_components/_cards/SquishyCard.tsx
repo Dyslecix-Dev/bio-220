@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { motion } from "motion/react";
 
-export default function SquishyCard({ title, subtitle, link, className }: { title: string; subtitle: string; link: string; className?: string }) {
+export default function SquishyCard({ title, subtitle, link, className }: { title: string; subtitle?: string; link: string; className?: string }) {
   return (
     <section className="mx-auto w-fit">
       <Card title={title} subtitle={subtitle} link={link} className={className} />
@@ -10,7 +10,7 @@ export default function SquishyCard({ title, subtitle, link, className }: { titl
   );
 }
 
-const Card = ({ title, subtitle, link, className }: { title: string; subtitle: string; link: string; className?: string }) => {
+const Card = ({ title, subtitle, link, className }: { title: string; subtitle?: string; link: string; className?: string }) => {
   return (
     <motion.div
       whileHover="hover"
@@ -23,7 +23,7 @@ const Card = ({ title, subtitle, link, className }: { title: string; subtitle: s
           scale: 1.05,
         },
       }}
-      className={`relative h-96 w-80 shrink-0 overflow-hidden rounded-xl bg-indigo-500 p-8 ${className}`}
+      className={`relative h-96 w-80 shrink-0 overflow-hidden rounded-xl p-8 ${className}`}
     >
       <div className="relative z-10 text-white">
         <motion.span
@@ -111,3 +111,4 @@ const Background = () => {
     </motion.svg>
   );
 };
+
