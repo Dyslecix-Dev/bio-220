@@ -71,8 +71,8 @@ export default function SignUp() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950 py-20 text-zinc-200 selection:bg-zinc-600">
-      <motion.div
+    <main className="min-h-screen flex items-center justify-center bg-zinc-950 py-20 text-zinc-200 selection:bg-zinc-600">
+      <motion.section
         initial={{
           opacity: 0,
           y: 25,
@@ -89,26 +89,24 @@ export default function SignUp() {
       >
         <Heading />
         <SignUpForm showNotification={showNotification} />
-      </motion.div>
+      </motion.section>
 
       <GlowingDotsBackground />
       <StackedNotification isNotifOpen={isNotifOpen} setIsNotifOpen={setIsNotifOpen} message={message} />
-    </div>
+    </main>
   );
 }
 
 const Heading = () => (
   <div>
     <div className="mb-9 mt-6 space-y-1.5">
-      <h1 className="text-2xl font-semibold">Create an account</h1>
-      <p className="text-zinc-400">
+      <h1 className="text-2xl text-indigo-400 font-semibold">Create an account</h1>
+      <p className="text-indigo-300">
         Already have an account?{" "}
-        <Link href="/auth/login" className="text-blue-400">
+        <Link href="/auth/login" className="text-emerald-400">
           Login.
         </Link>
       </p>
-
-      <p className="text-zinc-400">After signing up, please check your email to verify your account.</p>
     </div>
   </div>
 );
@@ -181,7 +179,7 @@ const SignUpForm = ({ showNotification }: { showNotification: (message: string) 
   return (
     <form onSubmit={handleSubmit}>
       <div className="mb-3">
-        <label htmlFor="name" className="mb-1.5 block text-zinc-400">
+        <label htmlFor="name" className="mb-1.5 block text-indigo-300">
           Name
         </label>
         <input
@@ -194,7 +192,7 @@ const SignUpForm = ({ showNotification }: { showNotification: (message: string) 
         />
       </div>
       <div className="mb-3">
-        <label htmlFor="email" className="mb-1.5 block text-zinc-400">
+        <label htmlFor="email" className="mb-1.5 block text-indigo-300">
           Email
         </label>
         <input
@@ -208,7 +206,7 @@ const SignUpForm = ({ showNotification }: { showNotification: (message: string) 
       </div>
       <div className="mb-3">
         <div className="mb-1.5 flex items-end justify-between">
-          <label htmlFor="password" className="block text-zinc-400">
+          <label htmlFor="password" className="block text-indigo-300">
             Password
           </label>
         </div>
@@ -223,7 +221,7 @@ const SignUpForm = ({ showNotification }: { showNotification: (message: string) 
       </div>
       <div className="mb-3">
         <div className="mb-1.5 flex items-end justify-between">
-          <label htmlFor="confirm_password" className="block text-zinc-400">
+          <label htmlFor="confirm_password" className="block text-indigo-300">
             Confirm Password
           </label>
         </div>
@@ -237,7 +235,7 @@ const SignUpForm = ({ showNotification }: { showNotification: (message: string) 
         />
       </div>
       <div className="mb-6">
-        <label htmlFor="admin_code" className="mb-1.5 block text-zinc-400">
+        <label htmlFor="admin_code" className="mb-1.5 block text-indigo-300">
           Admin Code
         </label>
         <input

@@ -43,8 +43,8 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950 py-20 text-zinc-200 selection:bg-zinc-600">
-      <motion.div
+    <main className="min-h-screen flex items-center justify-center bg-zinc-950 py-20 text-zinc-200 selection:bg-zinc-600">
+      <motion.section
         initial={{
           opacity: 0,
           y: 25,
@@ -61,8 +61,8 @@ export default function ForgotPassword() {
       >
         <div>
           <div className="mb-9 mt-6 space-y-1.5">
-            <h1 className="text-2xl font-semibold">Reset your password</h1>
-            <p className="text-zinc-400">Enter your email address and we&apos;ll send you a link to reset your password.</p>
+            <h1 className="text-2xl text-indigo-400 font-semibold">Reset your password</h1>
+            <p className="text-indigo-300">Enter your email address and we&apos;ll send you a link to reset your password.</p>
           </div>
         </div>
 
@@ -70,7 +70,7 @@ export default function ForgotPassword() {
 
         <form onSubmit={handleResetPassword}>
           <div className="mb-6">
-            <label htmlFor="email" className="mb-1.5 block text-zinc-400">
+            <label htmlFor="email" className="mb-1.5 block text-indigo-300">
               Email
             </label>
             <input
@@ -80,7 +80,7 @@ export default function ForgotPassword() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your.email@provider.com"
               required
-              className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 placeholder-zinc-500 ring-1 ring-transparent transition-shadow focus:outline-0 focus:ring-blue-700"
+              className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 placeholder-zinc-500 ring-1 ring-transparent transition-shadow focus:outline-0 focus:ring-indigo-700"
             />
           </div>
 
@@ -89,14 +89,14 @@ export default function ForgotPassword() {
           </SplashButton>
 
           <div className="mt-4 text-center">
-            <Link href="/auth/login" className="text-blue-400 hover:text-blue-300 text-sm">
+            <Link href="/auth/login" className="text-emerald-400 hover:text-indigo-300 text-md">
               Back to login
             </Link>
           </div>
         </form>
-      </motion.div>
+      </motion.section>
 
       <GlowingDotsBackground />
-    </div>
+    </main>
   );
 }

@@ -71,8 +71,8 @@ export default function Login() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950 py-20 text-zinc-200 selection:bg-zinc-600">
-      <motion.div
+    <main className="min-h-screen flex items-center justify-center bg-zinc-950 py-20 text-zinc-200 selection:bg-zinc-600">
+      <motion.section
         initial={{
           opacity: 0,
           y: 25,
@@ -89,21 +89,21 @@ export default function Login() {
       >
         <Heading />
         <LoginForm showNotification={showNotification} />
-      </motion.div>
+      </motion.section>
 
       <GlowingDotsBackground />
       <StackedNotification isNotifOpen={isNotifOpen} setIsNotifOpen={setIsNotifOpen} message={message} />
-    </div>
+    </main>
   );
 }
 
 const Heading = () => (
   <div>
     <div className="mb-9 mt-6 space-y-1.5">
-      <h1 className="text-2xl font-semibold">Sign in to your account</h1>
-      <p className="text-zinc-400">
+      <h1 className="text-2xl text-indigo-400 font-semibold">Sign in to your account</h1>
+      <p className="text-indigo-300">
         Don&apos;t have an account?{" "}
-        <Link href="/auth/signup" className="text-blue-400">
+        <Link href="/auth/signup" className="text-emerald-400">
           Sign Up.
         </Link>
       </p>
@@ -165,7 +165,7 @@ const LoginForm = ({ showNotification }: { showNotification: (message: string) =
   return (
     <form onSubmit={handleSubmit}>
       <div className="mb-3">
-        <label htmlFor="email" className="mb-1.5 block text-zinc-400">
+        <label htmlFor="email" className="mb-1.5 block text-indigo-300">
           Email
         </label>
         <input
@@ -174,16 +174,16 @@ const LoginForm = ({ showNotification }: { showNotification: (message: string) =
           type="email"
           placeholder="your.email@provider.com"
           required
-          className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 placeholder-zinc-500 ring-1 ring-transparent transition-shadow focus:outline-0 focus:ring-blue-700"
+          className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 placeholder-zinc-500 ring-1 ring-transparent transition-shadow focus:outline-0 focus:ring-indigo-700"
         />
       </div>
       <div className="mb-6">
         <div className="mb-1.5 flex items-end justify-between">
-          <label htmlFor="password" className="block text-zinc-400">
+          <label htmlFor="password" className="block text-indigo-300">
             Password
           </label>
 
-          <Link href="/auth/forgot-password" className="text-sm text-blue-400 hover:text-blue-300 transition duration-300">
+          <Link href="/auth/forgot-password" className="text-sm text-indigo-400 hover:text-indigo-300 transition duration-300">
             Forgot password?
           </Link>
         </div>
@@ -193,7 +193,7 @@ const LoginForm = ({ showNotification }: { showNotification: (message: string) =
           type="password"
           placeholder="••••••••••••"
           required
-          className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 placeholder-zinc-500 ring-1 ring-transparent transition-shadow focus:outline-0 focus:ring-blue-700"
+          className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 placeholder-zinc-500 ring-1 ring-transparent transition-shadow focus:outline-0 focus:ring-indigo-700"
         />
       </div>
 

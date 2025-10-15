@@ -71,5 +71,5 @@ export async function signup(formData: FormData) {
   if (authError) return { errorMessage: authError.message };
   if (!authData.user) return { errorMessage: "Registration failed." };
 
-  return { success: true };
+  redirect("/");
 }
