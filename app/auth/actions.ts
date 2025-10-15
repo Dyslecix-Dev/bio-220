@@ -52,32 +52,24 @@ export async function signup(formData: FormData) {
   if (confirm_password.length < 8) return { errorMessage: "Confirm password must be at least 8 characters!" };
   if (password !== confirm_password) return { errorMessage: "Passwords do not match!" };
 
-  const authForm = {
-    email: formData.get("email") as string,
-    password: formData.get("password") as string,
-  };
+  let userCredentials = "user";
+  if (admin_code === process.env.NEXT_PUBLIC_ADMIN_CODE) {
+    userCredentials = "admin";
+  }
 
-  const { data: authData, error: authError } = await supabase.auth.signUp(authForm);
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email: email,
+    password: password,
+    options: {
+      data: {
+        name: name,
+        admin: userCredentials,
+      },
+    },
+  });
 
   if (authError) return { errorMessage: authError.message };
-  else if (!authData.user) return { errorMessage: "Registration failed." };
+  if (!authData.user) return { errorMessage: "Registration failed." };
 
-  let userCredentials = "user";
-  if (admin_code !== process.env.NEXT_PUBLIC_ADMIN_CODE) userCredentials = "admin";
-
-  const publicForm = {
-    id: authData.user.id,
-    name: name,
-    email: authData.user.email,
-    admin: userCredentials,
-    online: false,
-    study_streak: 0,
-  };
-
-  const { error: publicError } = await supabase.from("user_profiles").insert(publicForm);
-
-  if (publicError) return { errorMessage: publicError.message };
-
-  revalidatePath("/", "layout");
-  redirect("/");
+  return { success: true };
 }
