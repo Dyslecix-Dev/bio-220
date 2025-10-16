@@ -12,6 +12,7 @@ import { createClient } from "@/utils/supabase/client";
 
 export default function Navbar() {
   const [userID, setUserID] = useState<string>("");
+  const [userAdmin, setUserAdmin] = useState<string>("");
   const [scrolled, setScrolled] = useState(false);
   const { scrollY } = useScroll();
 
@@ -27,13 +28,19 @@ export default function Navbar() {
           error,
         } = await supabase.auth.getUser();
 
-        if (error) {
+        const { data: userProfile, error: userError } = await supabase.from("user_profiles").select("*").eq("id", user?.id).single();
+
+        if (error || userError) {
           console.error("Error getting user:", error);
           return;
         }
 
         if (user) {
           setUserID(user.id);
+        }
+
+        if (userProfile) {
+          setUserAdmin(userProfile.admin);
         }
       } catch (error) {
         console.error("Error in getUser:", error);
@@ -80,10 +87,10 @@ export default function Navbar() {
       <div className="mx-auto flex max-w-7xl items-center justify-between">
         <Logo />
         <div className="hidden gap-6 lg:flex">
-          <Links />
+          <Links userAdmin={userAdmin} />
           <LogoutButton onClick={signOut} />
         </div>
-        <MobileMenu onClick={signOut} />
+        <MobileMenu onClick={signOut} userAdmin={userAdmin} />
       </div>
     </nav>
   );
@@ -103,12 +110,19 @@ const Logo = ({ color = "white" }) => {
   );
 };
 
-const Links = () => {
+const Links = ({ userAdmin }: { userAdmin: string }) => {
+  const links = LINKS.filter((link) => {
+    if (link.text === "Admin") {
+      return userAdmin === "admin";
+    }
+    return true;
+  });
+
   return (
     <div className="flex items-center gap-6">
-      {LINKS.map((l) => (
-        <NavLink key={l.text} href={l.href}>
-          {l.text}
+      {links.map((link) => (
+        <NavLink key={link.text} href={link.href}>
+          {link.text}
         </NavLink>
       ))}
     </div>
@@ -198,7 +212,7 @@ const MobileMenuLink = ({ children, href, FoldContent, setMenuOpen }: { children
             e.stopPropagation();
             setMenuOpen(false);
           }}
-          href="#"
+          href={href}
           className="flex w-full cursor-pointer items-center justify-between border-b border-neutral-300 py-6 text-start text-2xl font-semibold"
         >
           <span>{children}</span>
@@ -224,8 +238,15 @@ const MobileMenuLink = ({ children, href, FoldContent, setMenuOpen }: { children
   );
 };
 
-const MobileMenu = ({ onClick: signOut }: { onClick: () => void }) => {
+const MobileMenu = ({ onClick: signOut, userAdmin }: { onClick: () => void; userAdmin: string }) => {
   const [open, setOpen] = useState(false);
+
+  const links = LINKS.filter((link) => {
+    if (link.text === "Admin") {
+      return userAdmin === "admin";
+    }
+    return true;
+  });
 
   return (
     <div className="block lg:hidden">
@@ -248,9 +269,9 @@ const MobileMenu = ({ onClick: signOut }: { onClick: () => void }) => {
               </button>
             </div>
             <div className="h-screen overflow-y-scroll bg-neutral-100 p-6">
-              {LINKS.map((l) => (
-                <MobileMenuLink key={l.text} href={l.href} setMenuOpen={setOpen}>
-                  {l.text}
+              {links.map((link) => (
+                <MobileMenuLink key={link.text} href={link.href} setMenuOpen={setOpen}>
+                  {link.text}
                 </MobileMenuLink>
               ))}
             </div>
@@ -265,6 +286,10 @@ const MobileMenu = ({ onClick: signOut }: { onClick: () => void }) => {
 };
 
 const LINKS = [
+  {
+    text: "Admin",
+    href: "/cms",
+  },
   // {
   //   text: "Contact",
   //   href: "#",
@@ -273,10 +298,10 @@ const LINKS = [
   //   text: "Leaderboard",
   //   href: "#",
   // },
-  {
-    text: "FAQ",
-    href: "#",
-  },
+  // {
+  //   text: "FAQ",
+  //   href: "#",
+  // },
   // {
   //   text: "Profile",
   //   href: "#",

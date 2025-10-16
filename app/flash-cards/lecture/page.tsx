@@ -21,7 +21,7 @@ const FlashCards = () => {
         <SquishyCard
           title="Lecture 2"
           // subtitle="The respiratory system."
-          link="lecture/seven"
+          link="lecture/two"
           className="bg-emerald-600"
         />
       </div>
