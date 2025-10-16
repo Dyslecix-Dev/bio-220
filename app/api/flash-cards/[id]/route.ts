@@ -34,9 +34,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // Updates a single flash card
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: { cardId: string } }) {
   try {
-    const { id } = params;
+    const { cardId } = params;
     const formData = await request.formData();
 
     const topic = formData.get("topic") as string;
@@ -99,7 +99,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     // Update flash card in database
-    const { error: updateError } = await supabase.from("flash_cards").update(updateData).eq("id", id);
+    const { error: updateError } = await supabase.from("flash_cards").update(updateData).eq("id", cardId);
 
     if (updateError) {
       throw new Error(`Failed to update flash card: ${updateError.message}`);
