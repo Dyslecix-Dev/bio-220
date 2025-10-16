@@ -8,7 +8,6 @@ import { useState } from "react";
 import { FiUpload, FiX } from "react-icons/fi";
 
 import Navbar from "@/app/_components/Navbar";
-import { POST as createFlashCard } from "@/app/api/create-flash-card/route"; // Adjust path as needed
 
 export default function CreateFlashCard() {
   const router = useRouter();
@@ -78,7 +77,12 @@ export default function CreateFlashCard() {
       }
 
       // Call server action
-      const result = await createFlashCard(formData);
+      const response = await fetch("/api/create-flash-card", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
 
       if (!result.success) {
         setError(result.error || "Failed to create flash card");
