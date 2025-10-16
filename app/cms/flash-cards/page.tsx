@@ -1,9 +1,5 @@
 "use client";
 
-// TODO: Remove buttons if a user cannot delete/edit that card
-// BUG: Does not show all the content in a card if there is too much content
-// BUG: Card's buttons still work from the back of the card
-
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -22,6 +18,7 @@ export default function CMSFlashCards() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [flashCards, setFlashCards] = useState<FlashCardType[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFlashCards();
@@ -40,6 +37,8 @@ export default function CMSFlashCards() {
         setLoading(false);
         return;
       }
+
+      setCurrentUserId(user.id);
 
       const { data, error } = await supabase.from("flash_cards").select(`
           *,
@@ -203,14 +202,14 @@ export default function CMSFlashCards() {
         </div>
 
         {sortedTopics.map((topic) => (
-          <TopicSection key={topic} topic={topic} cards={groupedCards[topic]} onDeleteCard={handleDeleteCard} />
+          <TopicSection key={topic} topic={topic} cards={groupedCards[topic]} onDeleteCard={handleDeleteCard} currentUserId={currentUserId} />
         ))}
       </section>
     </main>
   );
 }
 
-const TopicSection = ({ topic, cards, onDeleteCard }: { topic: string; cards: FlashCardType[]; onDeleteCard: (cardId: string) => void }) => {
+const TopicSection = ({ topic, cards, onDeleteCard, currentUserId }: { topic: string; cards: FlashCardType[]; onDeleteCard: (cardId: string) => void; currentUserId: string | null }) => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredCards = cards.filter((card) => {
@@ -254,16 +253,18 @@ const TopicSection = ({ topic, cards, onDeleteCard }: { topic: string; cards: Fl
       {/* Cards Row */}
       <div className="flex gap-4 overflow-x-auto pb-4">
         {filteredCards.map((card) => (
-          <FlipCard key={card.id} card={card} onDeleteCard={onDeleteCard} />
+          <FlipCard key={card.id} card={card} onDeleteCard={onDeleteCard} currentUserId={currentUserId} />
         ))}
       </div>
     </div>
   );
 };
 
-const FlipCard = ({ card, onDeleteCard }: { card: FlashCardType; onDeleteCard: (cardId: string) => void }) => {
+const FlipCard = ({ card, onDeleteCard, currentUserId }: { card: FlashCardType; onDeleteCard: (cardId: string) => void; currentUserId: string | null }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const isOwner = currentUserId === card.user_id;
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't flip if clicking on buttons
@@ -295,15 +296,17 @@ const FlipCard = ({ card, onDeleteCard }: { card: FlashCardType; onDeleteCard: (
             className="absolute inset-0 w-full h-full rounded-lg border border-zinc-700 bg-zinc-900 hover:border-indigo-500 transition-colors overflow-hidden"
             style={{ backfaceVisibility: "hidden" }}
           >
-            {/* Action Buttons - Front */}
-            <div className="absolute top-2 left-2 right-2 flex justify-between z-10">
-              <button onClick={handleDeleteClick} className="p-2 bg-red-600 hover:bg-red-700 rounded-full transition-colors cursor-pointer" title="Delete card">
-                <FiX className="text-white" />
-              </button>
-              <Link href={`/cms/flash-cards/${card.id}`} className="p-2 bg-indigo-600 hover:bg-indigo-700 rounded-full transition-colors" title="Edit card">
-                <FiEdit2 className="text-white" />
-              </Link>
-            </div>
+            {/* Action Buttons - Front (only show if owner) */}
+            {isOwner && (
+              <div className="absolute top-2 left-2 right-2 flex justify-between z-10" style={{ pointerEvents: isFlipped ? "none" : "auto" }}>
+                <button onClick={handleDeleteClick} className="p-2 bg-red-600 hover:bg-red-700 rounded-full transition-colors cursor-pointer" title="Delete card">
+                  <FiX className="text-white" />
+                </button>
+                <Link href={`/cms/flash-cards/${card.id}`} className="p-2 bg-indigo-600 hover:bg-indigo-700 rounded-full transition-colors" title="Edit card">
+                  <FiEdit2 className="text-white" />
+                </Link>
+              </div>
+            )}
 
             {/* Card Content - Front */}
             {card.frontImage ? (
@@ -313,12 +316,12 @@ const FlipCard = ({ card, onDeleteCard }: { card: FlashCardType; onDeleteCard: (
                 </div>
                 {card.frontText && (
                   <div className="flex-1 overflow-y-auto p-4 bg-zinc-800 border-t border-zinc-700">
-                    <p className="text-sm">{card.frontText}</p>
+                    <p className="text-sm whitespace-pre-wrap">{card.frontText}</p>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="h-full pt-12 p-6 overflow-y-auto flex items-center justify-center">{card.frontText && <p className="text-lg text-center">{card.frontText}</p>}</div>
+              <div className="h-full pt-12 p-6 overflow-y-auto flex items-center justify-center">{card.frontText && <p className="text-lg text-center whitespace-pre-wrap">{card.frontText}</p>}</div>
             )}
 
             {/* ID Badge - Front */}
@@ -343,12 +346,14 @@ const FlipCard = ({ card, onDeleteCard }: { card: FlashCardType; onDeleteCard: (
                 </div>
                 {card.backText && (
                   <div className="flex-1 overflow-y-auto p-4 bg-zinc-600 border-t border-zinc-500">
-                    <p className="text-sm text-white">{card.backText}</p>
+                    <p className="text-sm text-white whitespace-pre-wrap">{card.backText}</p>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="h-full pt-12 p-6 overflow-y-auto flex items-center justify-center">{card.backText && <p className="text-lg text-center text-white">{card.backText}</p>}</div>
+              <div className="h-full pt-12 p-6 overflow-y-auto flex items-center justify-center">
+                {card.backText && <p className="text-lg text-center text-white whitespace-pre-wrap">{card.backText}</p>}
+              </div>
             )}
 
             {/* ID Badge - Back */}
