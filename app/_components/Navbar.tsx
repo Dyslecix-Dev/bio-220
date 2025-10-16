@@ -110,6 +110,7 @@ const Logo = ({ color = "white" }) => {
   );
 };
 
+// TODO: Add loader to cover when admin appears
 const Links = ({ userAdmin }: { userAdmin: string }) => {
   const links = LINKS.filter((link) => {
     if (link.text === "Admin") {

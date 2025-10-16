@@ -1,5 +1,9 @@
 "use client";
 
+// TODO: Remove buttons if a user cannot delete/edit that card
+// BUG: Does not show all the content in a card if there is too much content
+// BUG: Card's buttons still work from the back of the card
+
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -119,7 +123,7 @@ export default function CMSFlashCards() {
       if (imagesToDelete.length > 0) {
         try {
           // Call your API route to delete from Vercel Blob
-          const deleteResponse = await fetch("/api/delete-image", {
+          const deleteResponse = await fetch("/api/blob-images", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -304,17 +308,17 @@ const FlipCard = ({ card, onDeleteCard }: { card: FlashCardType; onDeleteCard: (
             {/* Card Content - Front */}
             {card.frontImage ? (
               <div className="flex flex-col h-full pt-12">
-                <div className="flex-1 relative">
+                <div className="flex-shrink-0 h-48 relative">
                   <Image src={card.frontImage} alt="Front of card" fill={true} className="object-contain p-4" />
                 </div>
                 {card.frontText && (
-                  <div className="flex-1 p-4 bg-zinc-800 border-t border-zinc-700">
-                    <p className="text-sm text-center">{card.frontText}</p>
+                  <div className="flex-1 overflow-y-auto p-4 bg-zinc-800 border-t border-zinc-700">
+                    <p className="text-sm">{card.frontText}</p>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="h-full pt-12 p-6 flex items-center justify-center">{card.frontText && <p className="text-lg text-center">{card.frontText}</p>}</div>
+              <div className="h-full pt-12 p-6 overflow-y-auto flex items-center justify-center">{card.frontText && <p className="text-lg text-center">{card.frontText}</p>}</div>
             )}
 
             {/* ID Badge - Front */}
@@ -331,30 +335,20 @@ const FlipCard = ({ card, onDeleteCard }: { card: FlashCardType; onDeleteCard: (
               transform: "rotateY(180deg)",
             }}
           >
-            {/* Action Buttons - Back */}
-            <div className="absolute top-2 left-2 right-2 flex justify-between z-10">
-              <button onClick={handleDeleteClick} className="p-2 bg-red-600 hover:bg-red-700 rounded-full transition-colors cursor-pointer" title="Delete card">
-                <FiX className="text-white" />
-              </button>
-              <Link href={`/cms/flash-cards/${card.id}`} className="p-2 bg-indigo-600 hover:bg-indigo-700 rounded-full transition-colors" title="Edit card">
-                <FiEdit2 className="text-white" />
-              </Link>
-            </div>
-
             {/* Card Content - Back */}
             {card.backImage ? (
               <div className="flex flex-col h-full pt-12">
-                <div className="flex-1 relative">
+                <div className="flex-shrink-0 h-48 relative">
                   <Image src={card.backImage} alt="Back of card" fill={true} className="object-contain p-4" />
                 </div>
                 {card.backText && (
-                  <div className="flex-1 p-4 bg-zinc-600 border-t border-zinc-500">
-                    <p className="text-sm text-center text-white">{card.backText}</p>
+                  <div className="flex-1 overflow-y-auto p-4 bg-zinc-600 border-t border-zinc-500">
+                    <p className="text-sm text-white">{card.backText}</p>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="h-full pt-12 p-6 flex items-center justify-center">{card.backText && <p className="text-lg text-center text-white">{card.backText}</p>}</div>
+              <div className="h-full pt-12 p-6 overflow-y-auto flex items-center justify-center">{card.backText && <p className="text-lg text-center text-white">{card.backText}</p>}</div>
             )}
 
             {/* ID Badge - Back */}
