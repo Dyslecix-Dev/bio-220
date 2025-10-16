@@ -1,6 +1,7 @@
 import { MouseEventHandler, ReactNode } from "react";
 
 export interface FlashCardType {
+  user_id: string;
   id: string;
   topic: string;
   frontText?: string;

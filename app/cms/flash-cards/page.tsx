@@ -1,8 +1,5 @@
 "use client";
 
-// TODO: Delete from supabase
-// BUG: Delete and edit buttons don't have hover effects on back of card
-
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -82,19 +79,72 @@ export default function CMSFlashCards() {
   const handleDeleteCard = async (cardId: string) => {
     try {
       const supabase = await createClient();
-
-      const { error } = await supabase.from("flash_cards").delete().eq("id", cardId);
-
-      if (error) {
-        console.error("Error deleting card:", error);
-        alert("Failed to delete card");
+      // Get current user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        alert("You must be logged in to delete cards");
+        return;
+      }
+      // Get the card to access image URLs and verify ownership
+      const cardToDelete = flashCards.find((card) => card.id === cardId);
+      if (!cardToDelete) {
+        alert("Card not found");
+        return;
+      }
+      // Check if user owns this card (client-side check for better UX)
+      if (cardToDelete.user_id !== user.id) {
+        alert("You can only delete your own flash cards");
         return;
       }
 
-      setFlashCards((prev) => prev.filter((card) => card.id !== cardId));
-    } catch (err) {
-      console.error("Error deleting card:", err);
-      alert("Failed to delete card");
+      // Delete the flash card (progress will be deleted automatically via CASCADE)
+      const { error } = await supabase.from("flash_cards").delete().eq("id", cardId);
+      if (error) {
+        console.error("Error deleting card:", error);
+        alert(`Failed to delete card: ${error.message}`);
+        return;
+      }
+
+      // Delete associated images from Vercel Blob if they exist
+      const imagesToDelete = [];
+      if (cardToDelete.frontImage) {
+        imagesToDelete.push(cardToDelete.frontImage);
+      }
+      if (cardToDelete.backImage) {
+        imagesToDelete.push(cardToDelete.backImage);
+      }
+
+      if (imagesToDelete.length > 0) {
+        try {
+          // Call your API route to delete from Vercel Blob
+          const deleteResponse = await fetch("/api/delete-image", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ urls: imagesToDelete }),
+          });
+
+          if (!deleteResponse.ok) {
+            const errorData = await deleteResponse.json();
+            console.error("Error deleting images from Vercel Blob:", errorData);
+            // Don't alert - card is already deleted, this is cleanup
+          }
+        } catch (blobError) {
+          console.error("Failed to delete images from Vercel Blob:", blobError);
+          // Don't alert - card is already deleted, this is cleanup
+        }
+      }
+
+      // Update local state to remove the deleted card
+      setFlashCards((prevCards) => prevCards.filter((card) => card.id !== cardId));
+
+      alert("Flash card deleted successfully!");
+    } catch (error) {
+      console.error("Unexpected error deleting card:", error);
+      alert("An unexpected error occurred while deleting the card");
     }
   };
 
@@ -210,8 +260,6 @@ const TopicSection = ({ topic, cards, onDeleteCard }: { topic: string; cards: Fl
 const FlipCard = ({ card, onDeleteCard }: { card: FlashCardType; onDeleteCard: (cardId: string) => void }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [frontImageError, setFrontImageError] = useState(false);
-  const [backImageError, setBackImageError] = useState(false);
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't flip if clicking on buttons
@@ -260,7 +308,7 @@ const FlipCard = ({ card, onDeleteCard }: { card: FlashCardType; onDeleteCard: (
                   <Image src={card.frontImage} alt="Front of card" fill={true} className="object-contain p-4" />
                 </div>
                 {card.frontText && (
-                  <div className="p-4 bg-zinc-800 border-t border-zinc-700">
+                  <div className="flex-1 p-4 bg-zinc-800 border-t border-zinc-700">
                     <p className="text-sm text-center">{card.frontText}</p>
                   </div>
                 )}
@@ -300,7 +348,7 @@ const FlipCard = ({ card, onDeleteCard }: { card: FlashCardType; onDeleteCard: (
                   <Image src={card.backImage} alt="Back of card" fill={true} className="object-contain p-4" />
                 </div>
                 {card.backText && (
-                  <div className="p-4 bg-zinc-600 border-t border-zinc-500">
+                  <div className="flex-1 p-4 bg-zinc-600 border-t border-zinc-500">
                     <p className="text-sm text-center text-white">{card.backText}</p>
                   </div>
                 )}
