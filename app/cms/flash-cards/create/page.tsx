@@ -8,7 +8,7 @@ import { useState } from "react";
 import { FiUpload, FiX } from "react-icons/fi";
 
 import Navbar from "@/app/_components/Navbar";
-import { createFlashCard } from "@/app/api/create-flash-card/route"; // Adjust path as needed
+import { POST as createFlashCard } from "@/app/api/create-flash-card/route"; // Adjust path as needed
 
 export default function CreateFlashCard() {
   const router = useRouter();

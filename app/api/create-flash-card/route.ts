@@ -3,7 +3,7 @@
 import { put } from "@vercel/blob";
 import { createClient } from "@/utils/supabase/server";
 
-export async function createFlashCard(formData: FormData) {
+export async function POST(formData: FormData) {
   try {
     const supabase = await createClient();
 
