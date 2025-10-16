@@ -31,7 +31,6 @@ export default function EditFlashCard() {
   const cardId = params.id as string;
 
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form fields
@@ -132,20 +131,20 @@ export default function EditFlashCard() {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
+    setLoading(true);
     setError(null);
 
     try {
       // Validate that images have folders selected
       if (frontImageFile && !frontImageFolder) {
         setError("Please select a folder path for the front image");
-        setSubmitting(false);
+        setLoading(false);
         return;
       }
 
       if (backImageFile && !backImageFolder) {
         setError("Please select a folder path for the back image");
-        setSubmitting(false);
+        setLoading(false);
         return;
       }
 
@@ -189,7 +188,7 @@ export default function EditFlashCard() {
 
       if (!result.success) {
         setError(result.error || "Failed to update flash card");
-        setSubmitting(false);
+        setLoading(false);
         return;
       }
 
@@ -198,7 +197,7 @@ export default function EditFlashCard() {
     } catch (err) {
       console.error("Error:", err);
       setError("Failed to update flash card");
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
@@ -367,14 +366,14 @@ export default function EditFlashCard() {
           <div className="flex gap-4 pt-6">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={loading}
               className="flex-1 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors cursor-pointer"
             >
-              {submitting ? "Updating..." : "Update Flash Card"}
+              {loading ? "Updating..." : "Update Flash Card"}
             </button>
             <button
               type="button"
-              disabled={submitting}
+              disabled={loading}
               onClick={() => router.push("/cms/flash-cards")}
               className="px-6 py-3 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 rounded-lg font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
             >

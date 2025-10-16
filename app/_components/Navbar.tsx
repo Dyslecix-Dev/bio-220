@@ -13,6 +13,7 @@ import { createClient } from "@/utils/supabase/client";
 export default function Navbar() {
   const [userID, setUserID] = useState<string>("");
   const [userAdmin, setUserAdmin] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const { scrollY } = useScroll();
 
@@ -44,6 +45,8 @@ export default function Navbar() {
         }
       } catch (error) {
         console.error("Error in getUser:", error);
+      } finally {
+        setIsLoading(false);
       }
     }
 
@@ -87,10 +90,10 @@ export default function Navbar() {
       <div className="mx-auto flex max-w-7xl items-center justify-between">
         <Logo />
         <div className="hidden gap-6 lg:flex">
-          <Links userAdmin={userAdmin} />
-          <LogoutButton onClick={signOut} />
+          {isLoading ? <NavbarLoadingSkeleton /> : <Links userAdmin={userAdmin} />}
+          <LogoutButton onClick={signOut} isLoading={isLoading} />
         </div>
-        <MobileMenu onClick={signOut} userAdmin={userAdmin} />
+        <MobileMenu onClick={signOut} userAdmin={userAdmin} isLoading={isLoading} />
       </div>
     </nav>
   );
@@ -110,7 +113,15 @@ const Logo = ({ color = "white" }) => {
   );
 };
 
-// TODO: Add loader to cover when admin appears
+const NavbarLoadingSkeleton = () => {
+  return (
+    <div className="flex items-center gap-6">
+      {/* <div className="h-5 w-16 animate-pulse rounded bg-neutral-700" /> */}
+      <div className="h-5 w-16 animate-pulse rounded bg-neutral-700" />
+    </div>
+  );
+};
+
 const Links = ({ userAdmin }: { userAdmin: string }) => {
   const links = LINKS.filter((link) => {
     if (link.text === "Admin") {
@@ -166,7 +177,11 @@ const NavLink = ({ children, href, FlyoutContent }: { children: ReactNode; href:
   );
 };
 
-const LogoutButton = ({ onClick }: { onClick: () => void }) => {
+const LogoutButton = ({ onClick, isLoading }: { onClick: () => void; isLoading: boolean }) => {
+  if (isLoading) {
+    return <div className="h-10 w-24 animate-pulse rounded-lg bg-neutral-700" />;
+  }
+
   return (
     <div className="flex items-center gap-3">
       <button
@@ -239,7 +254,7 @@ const MobileMenuLink = ({ children, href, FoldContent, setMenuOpen }: { children
   );
 };
 
-const MobileMenu = ({ onClick: signOut, userAdmin }: { onClick: () => void; userAdmin: string }) => {
+const MobileMenu = ({ onClick: signOut, userAdmin, isLoading }: { onClick: () => void; userAdmin: string; isLoading: boolean }) => {
   const [open, setOpen] = useState(false);
 
   const links = LINKS.filter((link) => {
@@ -270,14 +285,21 @@ const MobileMenu = ({ onClick: signOut, userAdmin }: { onClick: () => void; user
               </button>
             </div>
             <div className="h-screen overflow-y-scroll bg-neutral-100 p-6">
-              {links.map((link) => (
-                <MobileMenuLink key={link.text} href={link.href} setMenuOpen={setOpen}>
-                  {link.text}
-                </MobileMenuLink>
-              ))}
+              {isLoading ? (
+                <div className="space-y-4">
+                  <div className="h-12 w-full animate-pulse rounded bg-neutral-300" />
+                  <div className="h-12 w-full animate-pulse rounded bg-neutral-300" />
+                </div>
+              ) : (
+                links.map((link) => (
+                  <MobileMenuLink key={link.text} href={link.href} setMenuOpen={setOpen}>
+                    {link.text}
+                  </MobileMenuLink>
+                ))
+              )}
             </div>
             <div className="flex justify-end bg-neutral-950 p-6">
-              <LogoutButton onClick={signOut} />
+              {isLoading ? <div className="h-10 w-24 animate-pulse rounded-lg bg-neutral-700" /> : <LogoutButton onClick={signOut} isLoading={false} />}
             </div>
           </motion.nav>
         )}
