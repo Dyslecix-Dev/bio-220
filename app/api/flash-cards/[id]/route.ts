@@ -5,9 +5,9 @@ import { NextRequest, NextResponse } from "next/server";
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 // Gets a single flash card
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Fetch flash card from Supabase
     const { data: card, error } = await supabase.from("flash_cards").select("*").eq("id", id).single();
@@ -34,9 +34,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // Updates a single flash card
-export async function PUT(request: NextRequest, { params }: { params: { cardId: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { cardId } = params;
+    const { id } = await params;
     const formData = await request.formData();
 
     const topic = formData.get("topic") as string;
@@ -99,7 +99,7 @@ export async function PUT(request: NextRequest, { params }: { params: { cardId: 
     }
 
     // Update flash card in database
-    const { error: updateError } = await supabase.from("flash_cards").update(updateData).eq("id", cardId);
+    const { error: updateError } = await supabase.from("flash_cards").update(updateData).eq("id", id);
 
     if (updateError) {
       throw new Error(`Failed to update flash card: ${updateError.message}`);
