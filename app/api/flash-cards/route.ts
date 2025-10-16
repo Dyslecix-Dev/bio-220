@@ -65,6 +65,8 @@ export async function POST(request: NextRequest) {
       back_text: backText?.trim() || null,
       front_image: frontImageUrl,
       back_image: backImageUrl,
+      front_image_folder: frontImageUrl ? frontImageFolder?.trim() : null,
+      back_image_folder: backImageUrl ? backImageFolder?.trim() : null,
     });
 
     if (insertError) {

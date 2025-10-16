@@ -6,6 +6,7 @@ import { useState } from "react";
 import { FiUpload, FiX } from "react-icons/fi";
 
 import Navbar from "@/app/_components/Navbar";
+import ShuffleLoader from "@/app/_components/ShuffleLoader";
 
 // Define allowed values
 const TOPIC_OPTIONS = [
@@ -61,11 +62,13 @@ export default function CreateFlashCard() {
   const removeFrontImage = () => {
     setFrontImageFile(null);
     setFrontImagePreview(null);
+    setFrontImageFolder(""); // Clear folder when removing image
   };
 
   const removeBackImage = () => {
     setBackImageFile(null);
     setBackImagePreview(null);
+    setBackImageFolder(""); // Clear folder when removing image
   };
 
   // Handle form submission
@@ -75,6 +78,19 @@ export default function CreateFlashCard() {
     setError(null);
 
     try {
+      // Validate that images have folders selected
+      if (frontImageFile && !frontImageFolder) {
+        setError("Please select a folder path for the front image");
+        setLoading(false);
+        return;
+      }
+
+      if (backImageFile && !backImageFolder) {
+        setError("Please select a folder path for the back image");
+        setLoading(false);
+        return;
+      }
+
       // Create FormData
       const formData = new FormData();
       formData.append("topic", topic);
@@ -113,6 +129,14 @@ export default function CreateFlashCard() {
       setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen overflow-hidden bg-zinc-950 flex items-center justify-center">
+        <ShuffleLoader />
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen overflow-hidden bg-zinc-950 text-white">
@@ -185,7 +209,7 @@ export default function CreateFlashCard() {
               </div>
             )}
 
-            {frontImageFile && (
+            {frontImagePreview && (
               <div className="mt-3">
                 <label htmlFor="frontImageFolder" className="block text-xs font-semibold mb-1 text-zinc-400">
                   Folder Path <span className="text-red-500">*</span>
@@ -230,7 +254,7 @@ export default function CreateFlashCard() {
             {backImagePreview ? (
               <div className="relative w-full h-64 bg-zinc-800 rounded-lg overflow-hidden border border-zinc-600">
                 <Image src={backImagePreview} alt="Back preview" fill className="object-contain" />
-                <button type="button" onClick={removeBackImage} className="absolute top-2 right-2 p-2 bg-red-600 hover:bg-red-700 rounded-full transition-colors">
+                <button type="button" onClick={removeBackImage} className="absolute top-2 right-2 p-2 bg-red-600 hover:bg-red-700 rounded-full transition-colors cursor-pointer">
                   <FiX className="text-white" />
                 </button>
               </div>
@@ -244,7 +268,7 @@ export default function CreateFlashCard() {
               </div>
             )}
 
-            {backImageFile && (
+            {backImagePreview && (
               <div className="mt-3">
                 <label htmlFor="backImageFolder" className="block text-xs font-semibold mb-1 text-zinc-400">
                   Folder Path <span className="text-red-500">*</span>

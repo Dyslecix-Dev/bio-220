@@ -1,7 +1,5 @@
 "use client";
 
-// BUG: If images are edited, they aren't being moved to a different folder or removed from blob
-
 import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -65,18 +63,21 @@ export default function EditFlashCard() {
         }
 
         const card = result.data;
+
         setTopic(card.topic);
         setFrontText(card.frontText || "");
         setBackText(card.backText || "");
 
         if (card.frontImage) {
           setFrontImagePreview(card.frontImage);
-          setFrontImageFolder(card.frontImageFolder || "");
+          const folder = card.frontImageFolder || "";
+          setFrontImageFolder(folder);
         }
 
         if (card.backImage) {
           setBackImagePreview(card.backImage);
-          setBackImageFolder(card.backImageFolder || "");
+          const folder = card.backImageFolder || "";
+          setBackImageFolder(folder);
         }
 
         setLoading(false);
@@ -99,6 +100,7 @@ export default function EditFlashCard() {
       setFrontImageFile(file);
       setFrontImagePreview(URL.createObjectURL(file));
       setFrontImageRemoved(false);
+      // Don't reset folder - keep the previous folder selection
     }
   };
 
@@ -108,6 +110,7 @@ export default function EditFlashCard() {
       setBackImageFile(file);
       setBackImagePreview(URL.createObjectURL(file));
       setBackImageRemoved(false);
+      // Don't reset folder - keep the previous folder selection
     }
   };
 
@@ -115,12 +118,14 @@ export default function EditFlashCard() {
   const removeFrontImage = () => {
     setFrontImageFile(null);
     setFrontImagePreview(null);
+    setFrontImageFolder(""); // Clear folder when removing image
     setFrontImageRemoved(true);
   };
 
   const removeBackImage = () => {
     setBackImageFile(null);
     setBackImagePreview(null);
+    setBackImageFolder(""); // Clear folder when removing image
     setBackImageRemoved(true);
   };
 
@@ -131,6 +136,19 @@ export default function EditFlashCard() {
     setError(null);
 
     try {
+      // Validate that images have folders selected
+      if (frontImageFile && !frontImageFolder) {
+        setError("Please select a folder path for the front image");
+        setSubmitting(false);
+        return;
+      }
+
+      if (backImageFile && !backImageFolder) {
+        setError("Please select a folder path for the back image");
+        setSubmitting(false);
+        return;
+      }
+
       // Create FormData
       const formData = new FormData();
       formData.append("topic", topic);
@@ -140,10 +158,16 @@ export default function EditFlashCard() {
       if (frontImageFile) {
         formData.append("frontImage", frontImageFile);
         formData.append("frontImageFolder", frontImageFolder);
+      } else if (frontImagePreview && frontImageFolder) {
+        // Send folder even if no new file (for folder changes)
+        formData.append("frontImageFolder", frontImageFolder);
       }
 
       if (backImageFile) {
         formData.append("backImage", backImageFile);
+        formData.append("backImageFolder", backImageFolder);
+      } else if (backImagePreview && backImageFolder) {
+        // Send folder even if no new file (for folder changes)
         formData.append("backImageFolder", backImageFolder);
       }
 
@@ -352,7 +376,7 @@ export default function EditFlashCard() {
               type="button"
               disabled={submitting}
               onClick={() => router.push("/cms/flash-cards")}
-              className="px-6 py-3 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-700 rounded-lg font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
+              className="px-6 py-3 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 rounded-lg font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
             >
               Cancel
             </button>
