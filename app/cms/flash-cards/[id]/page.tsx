@@ -53,7 +53,9 @@ export default function EditFlashCard() {
   useEffect(() => {
     const fetchFlashCard = async () => {
       try {
-        const response = await fetch(`/api/flash-cards/${cardId}`);
+        const response = await fetch(`/api/flash-cards/${cardId}`, {
+          method: "GET",
+        });
         const result = await response.json();
 
         if (!result.success) {
