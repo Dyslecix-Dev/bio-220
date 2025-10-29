@@ -83,11 +83,10 @@ const Cards = () => {
       <div className="mx-auto grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
         <SquishyCard title="Cards" subtitle="Flash cards for repetition." link="flash-cards" className="bg-blue-500" />
 
-        {/* <SquishyCard title="Exams" subtitle="Lecture and lab mock exams." link="exams" className="bg-red-500" />
+        {/* <SquishyCard title="Exams" subtitle="Lecture and lab mock exams." link="exams" className="bg-red-500" /> */}
 
-        <SquishyCard title="Kanban" subtitle="Plan your studying." link="kanban" className="bg-green-500" /> */}
+        {/* <SquishyCard title="Kanban" subtitle="Plan your studying." link="kanban" className="bg-green-500" /> */}
       </div>
     </section>
   );
 };
-
