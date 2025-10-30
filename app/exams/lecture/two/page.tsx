@@ -1,5 +1,6 @@
-import ExamComponent from "@/app/_components/Exam";
+import ExamIntro from "@/app/_components/_exams/ExamIntro";
 
 export default function LectureTwo() {
-  return <ExamComponent tableKey={"topic"} tableValue={"lecture-2"} />;
+  return <ExamIntro examNumber={2} examLink={"two"} examType="lecture" />;
 }
+
