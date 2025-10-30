@@ -52,7 +52,6 @@ const saveExamScore = async (supabase: SupabaseClientType, userId: string, examN
         score: newScore > existingScore ? newScore : existingScore,
         time_elapsed: shouldUpdateTime ? newTimeElapsed : existingTimeElapsed,
         number_of_tries_to_reach_perfect_score: !isPerfect && !existingIsPerfect ? existingTries + 1 : existingTries,
-        updated_at: new Date().toISOString(),
       };
 
       const { error } = await supabase.from("exam_scores").upsert(updateData, {
@@ -67,8 +66,6 @@ const saveExamScore = async (supabase: SupabaseClientType, userId: string, examN
           score: newScore,
           time_elapsed: newTimeElapsed,
           number_of_tries_to_reach_perfect_score: 1,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
         },
         {
           onConflict: "user_id,exam_type,exam_number",
@@ -140,7 +137,7 @@ export default function ExamQuestions({ multipleChoiceQuestions, examNumber, exa
 
   return (
     <main className="min-h-screen overflow-hidden bg-zinc-950">
-      <Countdown onTimeUp={handleTimeUp} hours={0} minutes={30} seconds={1} isSubmitted={isSubmitted} onElapsedTimeChange={setElapsedTime} />
+      <Countdown onTimeUp={handleTimeUp} hours={0} minutes={0} seconds={10} isSubmitted={isSubmitted} onElapsedTimeChange={setElapsedTime} />
       <Questions
         multipleChoiceQuestions={multipleChoiceQuestions}
         isSubmitted={isSubmitted}
@@ -197,7 +194,7 @@ const Questions: FC<FinalQuestionsType> = ({
   examType,
 }) => {
   const [selectedMultipleChoice, setSelectedMultipleChoice] = useState<QuestionType[]>([]);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [answers, setAnswers] = useState<Record<string, number[]>>({});
 
   useEffect(() => {
     const randomMC = getRandomElements(multipleChoiceQuestions, 30);
@@ -208,14 +205,33 @@ const Questions: FC<FinalQuestionsType> = ({
   const handleAnswerChange = (questionIndex: number, optionIndex: number, questionType: string) => {
     if (isSubmitted) return;
 
-    setAnswers((prev) => ({
-      ...prev,
-      [`${questionType}-${questionIndex}`]: optionIndex,
-    }));
+    const key = `${questionType}-${questionIndex}`;
+    setAnswers((prev) => {
+      const currentAnswers = prev[key] || [];
+      const isSelected = currentAnswers.includes(optionIndex);
+
+      if (isSelected) {
+        // Remove the option if already selected
+        return {
+          ...prev,
+          [key]: currentAnswers.filter((idx) => idx !== optionIndex),
+        };
+      } else {
+        // Add the option if not selected
+        return {
+          ...prev,
+          [key]: [...currentAnswers, optionIndex],
+        };
+      }
+    });
   };
 
   const isTestComplete = (): boolean => {
-    return Object.keys(answers).length === selectedMultipleChoice.length;
+    // Check if all questions have at least one answer
+    return selectedMultipleChoice.every((_, index) => {
+      const key = `mc-${index}`;
+      return answers[key] && answers[key].length > 0;
+    });
   };
 
   const calculateScore = useCallback((): ScoreType => {
@@ -223,8 +239,15 @@ const Questions: FC<FinalQuestionsType> = ({
     const totalQuestions = selectedMultipleChoice.length;
 
     selectedMultipleChoice.forEach((question, questionIndex) => {
-      const userAnswer = answers[`mc-${questionIndex}`];
-      if (userAnswer !== undefined && question.options[userAnswer]?.correct) {
+      const userAnswers = answers[`mc-${questionIndex}`] || [];
+
+      // Get all correct answer indices
+      const correctIndices = question.options.map((option, idx) => (option.correct ? idx : -1)).filter((idx) => idx !== -1);
+
+      // Check if user selected exactly the correct answers
+      const isCorrect = userAnswers.length === correctIndices.length && userAnswers.every((idx) => correctIndices.includes(idx));
+
+      if (isCorrect) {
         correctAnswers++;
       }
     });
@@ -251,48 +274,56 @@ const Questions: FC<FinalQuestionsType> = ({
     <section className="relative z-20 mx-auto flex h-full max-w-6xl flex-col items-center justify-center px-4 py-24 md:px-8 md:py-36">
       <div className="w-full max-w-4xl">
         <div className="mb-12">
+          <h2 className="text-3xl font-bold text-white mb-8 text-center">Select All That Apply</h2>
           <div className="space-y-8">
-            {selectedMultipleChoice.map((question, questionIndex) => (
-              <div key={questionIndex} className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
-                <h3 className="text-xl font-semibold text-white mb-4">
-                  {questionIndex + 1}. {question.question}
-                </h3>
-                <div className="space-y-3">
-                  {question.options.map((option, optionIndex) => {
-                    const isCorrect = option.correct;
-                    const isSelected = answers[`mc-${questionIndex}`] === optionIndex;
-                    const isWrong = isSelected && !isCorrect;
+            {selectedMultipleChoice.map((question, questionIndex) => {
+              const userAnswers = answers[`mc-${questionIndex}`] || [];
 
-                    let labelClass = "flex items-center space-x-3 cursor-pointer hover:bg-zinc-800 p-3 rounded-md transition-colors";
+              return (
+                <div key={questionIndex} className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
+                  <h3 className="text-xl font-semibold text-white mb-4">
+                    {questionIndex + 1}. {question.question}
+                  </h3>
+                  <div className="space-y-3">
+                    {question.options.map((option, optionIndex) => {
+                      const isCorrect = option.correct;
+                      const isSelected = userAnswers.includes(optionIndex);
+                      const isWrong = isSelected && !isCorrect;
+                      const isMissed = !isSelected && isCorrect && isSubmitted;
 
-                    if (isSubmitted) {
-                      if (isCorrect) {
-                        labelClass += " bg-green-800 border-2 border-green-600";
-                      } else if (isWrong) {
-                        labelClass += " bg-red-800 border-2 border-red-600";
+                      let labelClass = "flex items-center space-x-3 cursor-pointer hover:bg-zinc-800 p-3 rounded-md transition-colors";
+
+                      if (isSubmitted) {
+                        if (isCorrect && isSelected) {
+                          labelClass += " bg-green-800 border-2 border-green-600";
+                        } else if (isMissed) {
+                          labelClass += " bg-yellow-800 border-2 border-yellow-600";
+                        } else if (isWrong) {
+                          labelClass += " bg-red-800 border-2 border-red-600";
+                        }
+                        labelClass = labelClass.replace("cursor-pointer hover:bg-zinc-800", "cursor-not-allowed");
                       }
-                      labelClass = labelClass.replace("cursor-pointer hover:bg-zinc-800", "cursor-not-allowed");
-                    }
 
-                    return (
-                      <label key={optionIndex} className={labelClass}>
-                        <input
-                          type="radio"
-                          name={`mc-${questionIndex}`}
-                          value={optionIndex}
-                          onChange={() => handleAnswerChange(questionIndex, optionIndex, "mc")}
-                          className="w-4 h-4 text-blue-500 focus:ring-blue-500 focus:ring-2"
-                          disabled={isSubmitted}
-                        />
-                        <span className="text-gray-300">
-                          {String.fromCharCode(65 + optionIndex)}. {option.text}
-                        </span>
-                      </label>
-                    );
-                  })}
+                      return (
+                        <label key={optionIndex} className={labelClass}>
+                          <input
+                            type="checkbox"
+                            name={`mc-${questionIndex}-${optionIndex}`}
+                            checked={isSelected}
+                            onChange={() => handleAnswerChange(questionIndex, optionIndex, "mc")}
+                            className="w-4 h-4 text-blue-500 focus:ring-blue-500 focus:ring-2"
+                            disabled={isSubmitted}
+                          />
+                          <span className="text-gray-300">
+                            {String.fromCharCode(65 + optionIndex)}. {option.text}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -303,7 +334,6 @@ const Questions: FC<FinalQuestionsType> = ({
               {score.correctAnswers}/{score.totalQuestions}
             </div>
             <p className="text-xl text-blue-200 mb-4">You scored {Math.round((score.correctAnswers / score.totalQuestions) * 100)}%</p>
-            <p className="text-sm text-blue-300 mb-4">*Short answer questions are not included in this score</p>
 
             {completionTime && (
               <div className="flex items-center justify-center gap-2 text-lg text-indigo-200 mb-4">
