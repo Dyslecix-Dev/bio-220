@@ -184,11 +184,8 @@ export default function GlowingDots({
 
     regenDots();
 
-    let last = performance.now();
-
     const draw = (now: number) => {
       if (stopped) return;
-      last = now;
       const { width, height } = container.getBoundingClientRect();
 
       ctx.clearRect(0, 0, el.width, el.height);
