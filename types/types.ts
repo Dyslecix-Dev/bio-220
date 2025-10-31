@@ -1,7 +1,16 @@
 import { useRouter } from "next/navigation";
-import { MouseEventHandler, ReactNode, RefObject } from "react";
+import { Dispatch, DragEvent, MouseEventHandler, ReactNode, RefObject, SetStateAction } from "react";
 
 import { createClient } from "@/utils/supabase/client";
+
+export interface AddKanbanCardPropsType {
+  column: KanbanColumnType;
+  addCard: (card: Omit<KanbanCardType, "id">) => void;
+}
+
+export interface BurnBarrelType {
+  setCards: Dispatch<SetStateAction<KanbanCardType[]>>;
+}
 
 export interface CountdownTimeType {
   unit: "Hour" | "Minute" | "Second";
@@ -15,6 +24,11 @@ export interface CountdownType {
   hours: number;
   minutes: number;
   seconds: number;
+}
+
+export interface DropIndicatorType {
+  beforeId: string | null;
+  column: KanbanColumnType;
 }
 
 export interface ExamQuestionsType {
@@ -52,6 +66,29 @@ export interface FlashCardType {
   grade: number;
   attempts: number;
 }
+
+export interface KanbanCardPropsType {
+  id: string;
+  text: string;
+  column: KanbanColumnType;
+  handleDragStart: (e: DragEvent<HTMLDivElement>, card: KanbanCardType) => void;
+}
+
+export interface KanbanCardType {
+  id: string;
+  text: string;
+  column: KanbanColumnType;
+}
+
+export interface KanbanColumnPropsType {
+  text: string;
+  column: KanbanColumnType;
+  headingColor: string;
+  cards: KanbanCardType[];
+  setCards: Dispatch<SetStateAction<KanbanCardType[]>>;
+}
+
+type KanbanColumnType = "To-Do" | "In Progress" | "Complete";
 
 export interface NotificationType {
   id: string;

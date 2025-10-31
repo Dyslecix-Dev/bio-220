@@ -85,7 +85,7 @@ const Cards = () => {
 
         <SquishyCard title="Exams" subtitle="Lecture and lab mock exams." link="exams" className="bg-red-500" />
 
-        {/* <SquishyCard title="Kanban" subtitle="Plan your studying." link="kanban" className="bg-green-500" /> */}
+        <SquishyCard title="Kanban" subtitle="Plan your studying." link="kanban" className="bg-emerald-500" />
       </div>
     </section>
   );
