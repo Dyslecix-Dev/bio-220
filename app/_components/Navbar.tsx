@@ -321,10 +321,10 @@ const LINKS = [
   //   text: "Leaderboard",
   //   href: "#",
   // },
-  // {
-  //   text: "FAQ",
-  //   href: "#",
-  // },
+  {
+    text: "FAQ",
+    href: "/faq",
+  },
   // {
   //   text: "Profile",
   //   href: "#",

@@ -41,6 +41,12 @@ export interface ExamQuestionsType {
   calculateScoreRef: RefObject<(() => ScoreType) | null>;
 }
 
+export interface FAQuestionType {
+  title: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}
+
 export interface FinalExamQuestionsType {
   multipleChoiceQuestions: QuestionType[];
   examNumber: number;
