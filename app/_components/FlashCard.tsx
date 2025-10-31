@@ -312,7 +312,7 @@ const CardGrid = ({
 };
 
 const ReviewInterface = ({ onStartReview, selectedCategory, fetchFlashCards }: { onStartReview: (numCards: number) => void; selectedCategory: string | null; fetchFlashCards: () => void }) => {
-  const [numCards, setNumCards] = useState<number>(5);
+  const [numCards, setNumCards] = useState<number>(10);
 
   const handleReview = () => {
     if (numCards > 0) {

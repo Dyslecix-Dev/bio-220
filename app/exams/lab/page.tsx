@@ -18,10 +18,10 @@ const Exams = () => {
   return (
     <section className="relative z-20 mx-auto flex h-full max-w-6xl flex-col items-center justify-center px-4 py-24 md:px-8 md:py-36">
       <div className="mx-auto grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
-        <SquishyCard title="Lab 3" link="lab/three" className="bg-fuchsia-500" />
-        <SquishyCard title="Lab 4" link="lab/four" className="bg-indigo-500" />
-        <SquishyCard title="Lab 5" link="lab/five" className="bg-cyan-500" />
+        <SquishyCard title="Lab 4" link="lab/four" className="bg-fuchsia-500" />
+        <SquishyCard title="Lab 5" link="lab/five" className="bg-red-500" />
       </div>
     </section>
   );
 };
+

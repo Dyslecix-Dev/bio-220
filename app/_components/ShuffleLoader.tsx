@@ -90,7 +90,7 @@ export default function ShuffleLoader() {
               width: BLOCK_SIZE,
               height: BLOCK_SIZE,
             }}
-            className="bg-white"
+            className="bg-white z-100"
           />
         );
       })}

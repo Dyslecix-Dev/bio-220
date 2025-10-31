@@ -9,6 +9,7 @@ import { motion } from "motion/react";
 
 import Navbar from "@/app/_components/Navbar";
 import ShuffleLoader from "@/app/_components/ShuffleLoader";
+import StackedNotification from "@/app/_components/StackedNotification";
 
 import { createClient } from "@/utils/supabase/client";
 
@@ -19,6 +20,15 @@ export default function CMSFlashCards() {
   const [error, setError] = useState<string | null>(null);
   const [flashCards, setFlashCards] = useState<FlashCardType[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Notification state
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [notifMessage, setNotifMessage] = useState("");
+
+  const showNotification = (message: string) => {
+    setNotifMessage(message);
+    setIsNotifOpen(true);
+  };
 
   useEffect(() => {
     fetchFlashCards();
@@ -82,35 +92,33 @@ export default function CMSFlashCards() {
   const handleDeleteCard = async (cardId: string) => {
     try {
       const supabase = await createClient();
-      // Get current user
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
       if (!user) {
-        alert("You must be logged in to delete cards");
-        return;
-      }
-      // Get the card to access image URLs and verify ownership
-      const cardToDelete = flashCards.find((card) => card.id === cardId);
-      if (!cardToDelete) {
-        alert("Card not found");
-        return;
-      }
-      // Check if user owns this card (client-side check for better UX)
-      if (cardToDelete.user_id !== user.id) {
-        alert("You can only delete your own flash cards");
+        showNotification("You must be logged in to delete cards");
         return;
       }
 
-      // Delete the flash card (progress will be deleted automatically via CASCADE)
+      const cardToDelete = flashCards.find((card) => card.id === cardId);
+      if (!cardToDelete) {
+        showNotification("Card not found");
+        return;
+      }
+
+      if (cardToDelete.user_id !== user.id) {
+        showNotification("You can only delete your own flash cards");
+        return;
+      }
+
       const { error } = await supabase.from("flash_cards").delete().eq("id", cardId);
       if (error) {
         console.error("Error deleting card:", error);
-        alert(`Failed to delete card: ${error.message}`);
+        showNotification(`Failed to delete card: ${error.message}`);
         return;
       }
 
-      // Delete associated images from Vercel Blob if they exist
       const imagesToDelete = [];
       if (cardToDelete.frontImage) {
         imagesToDelete.push(cardToDelete.frontImage);
@@ -121,7 +129,6 @@ export default function CMSFlashCards() {
 
       if (imagesToDelete.length > 0) {
         try {
-          // Call your API route to delete from Vercel Blob
           const deleteResponse = await fetch("/api/blob-images", {
             method: "POST",
             headers: {
@@ -133,25 +140,21 @@ export default function CMSFlashCards() {
           if (!deleteResponse.ok) {
             const errorData = await deleteResponse.json();
             console.error("Error deleting images from Vercel Blob:", errorData);
-            // Don't alert - card is already deleted, this is cleanup
           }
         } catch (blobError) {
           console.error("Failed to delete images from Vercel Blob:", blobError);
-          // Don't alert - card is already deleted, this is cleanup
         }
       }
 
-      // Update local state to remove the deleted card
       setFlashCards((prevCards) => prevCards.filter((card) => card.id !== cardId));
-
-      alert("Flash card deleted successfully!");
+      showNotification("Flash card deleted successfully!");
     } catch (error) {
       console.error("Unexpected error deleting card:", error);
-      alert("An unexpected error occurred while deleting the card");
+      showNotification("An unexpected error occurred while deleting the card");
     }
   };
 
-  // Group cards by topic and sort
+  // Group cards by topic
   const groupedCards = flashCards.reduce((acc, card) => {
     const topic = card.topic || "Uncategorized";
     if (!acc[topic]) {
@@ -161,8 +164,27 @@ export default function CMSFlashCards() {
     return acc;
   }, {} as Record<string, FlashCardType[]>);
 
-  // Sort topics alphabetically and cards within each topic by ID
-  const sortedTopics = Object.keys(groupedCards).sort((a, b) => a.localeCompare(b));
+  // Custom sort: Lecture first, then Lab, then alphabetically
+  const sortedTopics = Object.keys(groupedCards).sort((a, b) => {
+    const aLower = a.toLowerCase();
+    const bLower = b.toLowerCase();
+
+    const aIsLecture = aLower.includes("lecture");
+    const bIsLecture = bLower.includes("lecture");
+    const aIsLab = aLower.includes("lab");
+    const bIsLab = bLower.includes("lab");
+
+    // Lecture comes first
+    if (aIsLecture && !bIsLecture) return -1;
+    if (!aIsLecture && bIsLecture) return 1;
+
+    // Lab comes second
+    if (aIsLab && !bIsLab) return -1;
+    if (!aIsLab && bIsLab) return 1;
+
+    // Otherwise alphabetical
+    return a.localeCompare(b);
+  });
 
   sortedTopics.forEach((topic) => {
     groupedCards[topic].sort((a, b) => {
@@ -205,6 +227,9 @@ export default function CMSFlashCards() {
           <TopicSection key={topic} topic={topic} cards={groupedCards[topic]} onDeleteCard={handleDeleteCard} currentUserId={currentUserId} />
         ))}
       </section>
+
+      {/* Notification Component */}
+      <StackedNotification isNotifOpen={isNotifOpen} setIsNotifOpen={setIsNotifOpen} message={notifMessage} />
     </main>
   );
 }
@@ -213,7 +238,6 @@ const TopicSection = ({ topic, cards, onDeleteCard, currentUserId }: { topic: st
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredCards = cards.filter((card) => {
-    // If no search query, show all cards
     if (!searchQuery.trim()) {
       return true;
     }
@@ -224,19 +248,25 @@ const TopicSection = ({ topic, cards, onDeleteCard, currentUserId }: { topic: st
     return frontMatch || backMatch;
   });
 
+  const formatTopic = (topic: string) => {
+    let formattedTopic = topic.replace("-", " ");
+
+    formattedTopic = formattedTopic.charAt(0).toUpperCase() + formattedTopic.slice(1);
+
+    return formattedTopic;
+  };
+
   return (
     <div className="mb-12">
-      {/* Topic Header with Search */}
       <div className="mb-4 pb-2 border-b-2 border-zinc-700">
         <div className="flex justify-between items-center mb-2">
           <div>
-            <h3 className="text-2xl font-semibold text-zinc-300">{topic}</h3>
+            <h3 className="text-2xl font-semibold text-zinc-300">{formatTopic(topic)}</h3>
             <p className="text-sm text-zinc-500">
               {filteredCards.length} {filteredCards.length === 1 ? "card" : "cards"}
             </p>
           </div>
 
-          {/* Search Bar */}
           <div className="relative">
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
             <input
@@ -250,7 +280,6 @@ const TopicSection = ({ topic, cards, onDeleteCard, currentUserId }: { topic: st
         </div>
       </div>
 
-      {/* Cards Row */}
       <div className="flex gap-4 overflow-x-auto pb-4">
         {filteredCards.map((card) => (
           <FlipCard key={card.id} card={card} onDeleteCard={onDeleteCard} currentUserId={currentUserId} />
@@ -267,7 +296,6 @@ const FlipCard = ({ card, onDeleteCard, currentUserId }: { card: FlashCardType; 
   const isOwner = currentUserId === card.user_id;
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Don't flip if clicking on buttons
     if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("a")) {
       return;
     }
@@ -291,12 +319,10 @@ const FlipCard = ({ card, onDeleteCard, currentUserId }: { card: FlashCardType; 
     <>
       <div className="flex-shrink-0 w-80 h-96 cursor-pointer relative" onClick={handleCardClick}>
         <motion.div className="relative w-full h-full" style={{ transformStyle: "preserve-3d" }} animate={{ rotateY: isFlipped ? 180 : 0 }} transition={{ duration: 0.6, ease: "easeInOut" }}>
-          {/* Front of card */}
           <div
             className="absolute inset-0 w-full h-full rounded-lg border border-zinc-700 bg-zinc-900 hover:border-indigo-500 transition-colors overflow-hidden"
             style={{ backfaceVisibility: "hidden" }}
           >
-            {/* Action Buttons - Front (only show if owner) */}
             {isOwner && (
               <div className="absolute top-2 left-2 right-2 flex justify-between z-10" style={{ pointerEvents: isFlipped ? "none" : "auto" }}>
                 <button onClick={handleDeleteClick} className="p-2 bg-red-600 hover:bg-red-700 rounded-full transition-colors cursor-pointer" title="Delete card">
@@ -308,7 +334,6 @@ const FlipCard = ({ card, onDeleteCard, currentUserId }: { card: FlashCardType; 
               </div>
             )}
 
-            {/* Card Content - Front */}
             {card.frontImage ? (
               <div className="flex flex-col h-full pt-12">
                 <div className="flex-shrink-0 h-48 relative">
@@ -324,13 +349,11 @@ const FlipCard = ({ card, onDeleteCard, currentUserId }: { card: FlashCardType; 
               <div className="h-full pt-12 p-6 overflow-y-auto flex items-center justify-center">{card.frontText && <p className="text-lg text-center whitespace-pre-wrap">{card.frontText}</p>}</div>
             )}
 
-            {/* ID Badge - Front */}
             <div className="absolute bottom-2 left-2">
               <span className="text-xs font-mono text-zinc-400 bg-zinc-800 px-2 py-1 rounded">ID: {card.id}</span>
             </div>
           </div>
 
-          {/* Back of card */}
           <div
             className="absolute inset-0 w-full h-full rounded-lg border border-zinc-700 bg-zinc-700 hover:border-indigo-500 transition-colors overflow-hidden"
             style={{
@@ -338,7 +361,6 @@ const FlipCard = ({ card, onDeleteCard, currentUserId }: { card: FlashCardType; 
               transform: "rotateY(180deg)",
             }}
           >
-            {/* Card Content - Back */}
             {card.backImage ? (
               <div className="flex flex-col h-full pt-12">
                 <div className="flex-shrink-0 h-48 relative">
@@ -356,7 +378,6 @@ const FlipCard = ({ card, onDeleteCard, currentUserId }: { card: FlashCardType; 
               </div>
             )}
 
-            {/* ID Badge - Back */}
             <div className="absolute bottom-2 left-2">
               <span className="text-xs font-mono text-zinc-300 bg-zinc-600 px-2 py-1 rounded">ID: {card.id}</span>
             </div>
@@ -364,7 +385,6 @@ const FlipCard = ({ card, onDeleteCard, currentUserId }: { card: FlashCardType; 
         </motion.div>
       </div>
 
-      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={cancelDelete}>
           <div className="bg-zinc-800 p-6 rounded-lg border border-zinc-700 max-w-sm" onClick={(e) => e.stopPropagation()}>

@@ -20,8 +20,10 @@ export default function ExamIntro({ examNumber, examLink, examType = "lecture" }
   };
 
   return (
-    <main className="min-h-screen w-full flex items-center justify-center bg-zinc-950 text-zinc-100">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-16 md:grid-cols-2 md:gap-8">
+    <main className="min-h-screen w-full flex items-center justify-center bg-zinc-950 text-zinc-100 relative">
+      <GlowingDotsBackground />
+
+      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-16 md:grid-cols-2 md:gap-8 relative z-10">
         <div>
           <h3 className="text-5xl font-black leading-[1.25] md:text-7xl">
             BIO 220
@@ -29,7 +31,10 @@ export default function ExamIntro({ examNumber, examLink, examType = "lecture" }
             {examType === "lab" ? "Lab" : "Lecture"} Exam {examNumber}
           </h3>
           <p className="mb-8 mt-4 text-lg text-slate-400">This is a timed test with 30 randomly generated questions (select all that apply). You have 30 minutes to complete it.</p>
-          <Link href={`/exams/${examType}/${examLink}/questions`} className="bg-indigo-500 text-white font-medium py-2 px-4 rounded transition-all hover:bg-indigo-600 active:scale-95 cursor-pointer">
+          <Link
+            href={`/exams/${examType}/${examLink}/questions`}
+            className="bg-indigo-500 text-white font-medium py-2 px-4 rounded transition-all hover:bg-indigo-600 active:scale-95 duration-300 cursor-pointer inline-block"
+          >
             Start Test
           </Link>
         </div>
@@ -54,7 +59,6 @@ export default function ExamIntro({ examNumber, examLink, examType = "lecture" }
           />
         </div>
       </div>
-      <GlowingDotsBackground />
     </main>
   );
 }

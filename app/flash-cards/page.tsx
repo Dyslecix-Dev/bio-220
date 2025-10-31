@@ -18,9 +18,9 @@ const FlashCards = () => {
   return (
     <section className="relative z-20 mx-auto flex h-full max-w-6xl flex-col items-center justify-center px-4 py-24 md:px-8 md:py-36">
       <div className="mx-auto grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
-        <SquishyCard title="Lecture" subtitle="Lecture flash cards." link="flash-cards/lecture" className="bg-amber-600" />
+        <SquishyCard title="Lecture" subtitle="Lecture flash cards." link="flash-cards/lecture" className="bg-violet-500" />
 
-        <SquishyCard title="Lab" subtitle="Lab flash cards." link="flash-cards/lab" className="bg-teal-600" />
+        <SquishyCard title="Lab" subtitle="Lab flash cards." link="flash-cards/lab" className="bg-teal-500" />
       </div>
     </section>
   );

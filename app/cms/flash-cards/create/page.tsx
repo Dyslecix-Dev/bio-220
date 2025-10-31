@@ -8,22 +8,26 @@ import { FiUpload, FiX } from "react-icons/fi";
 import Navbar from "@/app/_components/Navbar";
 import ShuffleLoader from "@/app/_components/ShuffleLoader";
 
-// Define allowed values
-const TOPIC_OPTIONS = [
-  { value: "lecture-2", label: "Lecture 2" },
-  { value: "lecture-3", label: "Lecture 3" },
-  { value: "lab-3", label: "Lab 3" },
-  { value: "lab-4", label: "Lab 4" },
-  { value: "lab-5", label: "Lab 5" },
+const TYPE_OPTIONS = [
+  { value: "lecture", label: "Lecture" },
+  { value: "lab", label: "Lab" },
 ];
 
-const FOLDER_PATH_OPTIONS = [
-  { value: "lecture/lecture-two", label: "lecture/lecture-two" },
-  { value: "lecture/lecture-three", label: "lecture/lecture-three" },
-  { value: "lab/lab-three", label: "lab/lab-three" },
-  { value: "lab/lab-four", label: "lab/lab-four" },
-  { value: "lab/lab-five", label: "lab/lab-five" },
-];
+const CHAPTER_OPTIONS = Array.from({ length: 20 }, (_, i) => ({
+  value: (i + 1).toString(),
+  label: `Chapter ${i + 1}`,
+}));
+
+const FOLDER_PATH_OPTIONS: Record<string, { value: string; label: string }[]> = {
+  lecture: Array.from({ length: 20 }, (_, i) => ({
+    value: `lecture/lecture-${i + 1}`,
+    label: `lecture/lecture-${i + 1}`,
+  })),
+  lab: Array.from({ length: 20 }, (_, i) => ({
+    value: `lab/lab-${i + 1}`,
+    label: `lab/lab-${i + 1}`,
+  })),
+};
 
 export default function CreateFlashCard() {
   const router = useRouter();
@@ -31,7 +35,8 @@ export default function CreateFlashCard() {
   const [error, setError] = useState<string | null>(null);
 
   // Form fields
-  const [topic, setTopic] = useState("");
+  const [topicType, setTopicType] = useState("");
+  const [topicChapter, setTopicChapter] = useState("");
   const [frontText, setFrontText] = useState("");
   const [backText, setBackText] = useState("");
   const [frontImageFile, setFrontImageFile] = useState<File | null>(null);
@@ -40,6 +45,20 @@ export default function CreateFlashCard() {
   const [backImagePreview, setBackImagePreview] = useState<string | null>(null);
   const [frontImageFolder, setFrontImageFolder] = useState("");
   const [backImageFolder, setBackImageFolder] = useState("");
+
+  // Handle type change and reset chapter
+  const handleTypeChange = (type: string) => {
+    setTopicType(type);
+    setTopicChapter("");
+    setFrontImageFolder("");
+    setBackImageFolder("");
+  };
+
+  // Get available folder paths based on selected type
+  const availableFolderPaths = topicType ? FOLDER_PATH_OPTIONS[topicType] || [] : [];
+
+  // Combine type and chapter to create topic value
+  const topic = topicType && topicChapter ? `${topicType}-${topicChapter}` : "";
 
   // Handle image selection
   const handleFrontImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,13 +81,13 @@ export default function CreateFlashCard() {
   const removeFrontImage = () => {
     setFrontImageFile(null);
     setFrontImagePreview(null);
-    setFrontImageFolder(""); // Clear folder when removing image
+    setFrontImageFolder("");
   };
 
   const removeBackImage = () => {
     setBackImageFile(null);
     setBackImagePreview(null);
-    setBackImageFolder(""); // Clear folder when removing image
+    setBackImageFolder("");
   };
 
   // Handle form submission
@@ -152,25 +171,52 @@ export default function CreateFlashCard() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Topic - Required */}
+          {/* Topic Type - Required */}
           <div>
-            <label htmlFor="topic" className="block text-sm font-semibold mb-2">
-              Topic <span className="text-red-500">*</span>
+            <label htmlFor="topicType" className="block text-sm font-semibold mb-2">
+              Type <span className="text-red-500">*</span>
             </label>
             <select
-              id="topic"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
+              id="topicType"
+              value={topicType}
+              onChange={(e) => handleTypeChange(e.target.value)}
               className="w-full px-4 py-3 bg-zinc-800 border border-zinc-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               required
             >
-              <option value="">Select a topic...</option>
-              {TOPIC_OPTIONS.map((option) => (
+              <option value="">Select type...</option>
+              {TYPE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Chapter - Required */}
+          <div>
+            <label htmlFor="topicChapter" className="block text-sm font-semibold mb-2">
+              Chapter <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="topicChapter"
+              value={topicChapter}
+              onChange={(e) => setTopicChapter(e.target.value)}
+              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              required
+              disabled={!topicType}
+            >
+              <option value="">{topicType ? "Select chapter..." : "Select type first..."}</option>
+              {CHAPTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {topic && (
+              <p className="mt-1 text-xs text-zinc-400">
+                Topic: <span className="font-mono text-indigo-400">{topic}</span>
+              </p>
+            )}
           </div>
 
           {/* Front Text - Optional */}
@@ -218,11 +264,12 @@ export default function CreateFlashCard() {
                   id="frontImageFolder"
                   value={frontImageFolder}
                   onChange={(e) => setFrontImageFolder(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   required
+                  disabled={!topicType}
                 >
-                  <option value="">Select a folder path...</option>
-                  {FOLDER_PATH_OPTIONS.map((option) => (
+                  <option value="">{topicType ? "Select folder path..." : "Select type first..."}</option>
+                  {availableFolderPaths.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -277,11 +324,12 @@ export default function CreateFlashCard() {
                   id="backImageFolder"
                   value={backImageFolder}
                   onChange={(e) => setBackImageFolder(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   required
+                  disabled={!topicType}
                 >
-                  <option value="">Select a folder path...</option>
-                  {FOLDER_PATH_OPTIONS.map((option) => (
+                  <option value="">{topicType ? "Select folder path..." : "Select type first..."}</option>
+                  {availableFolderPaths.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
