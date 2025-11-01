@@ -7,32 +7,29 @@ import { FiUpload, FiX } from "react-icons/fi";
 
 import Navbar from "@/app/_components/Navbar";
 import ShuffleLoader from "@/app/_components/ShuffleLoader";
+import StackedNotification from "@/app/_components/StackedNotification";
 
 const TYPE_OPTIONS = [
   { value: "lecture", label: "Lecture" },
   { value: "lab", label: "Lab" },
 ];
 
-const CHAPTER_OPTIONS = Array.from({ length: 20 }, (_, i) => ({
-  value: (i + 1).toString(),
-  label: `Chapter ${i + 1}`,
-}));
-
-const FOLDER_PATH_OPTIONS: Record<string, { value: string; label: string }[]> = {
-  lecture: Array.from({ length: 20 }, (_, i) => ({
-    value: `lecture/lecture-${i + 1}`,
-    label: `lecture/lecture-${i + 1}`,
+const CHAPTER_OPTIONS: Record<string, { value: string; label: string }[]> = {
+  lecture: Array.from({ length: 13 }, (_, i) => ({
+    value: (i + 1).toString(),
+    label: `Chapter ${i + 1}`,
   })),
-  lab: Array.from({ length: 20 }, (_, i) => ({
-    value: `lab/lab-${i + 1}`,
-    label: `lab/lab-${i + 1}`,
+  lab: Array.from({ length: 14 }, (_, i) => ({
+    value: (i + 1).toString(),
+    label: `Week ${i + 1}`,
   })),
 };
 
 export default function CreateFlashCard() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [notifMessage, setNotifMessage] = useState("");
 
   // Form fields
   const [topicType, setTopicType] = useState("");
@@ -43,22 +40,21 @@ export default function CreateFlashCard() {
   const [backImageFile, setBackImageFile] = useState<File | null>(null);
   const [frontImagePreview, setFrontImagePreview] = useState<string | null>(null);
   const [backImagePreview, setBackImagePreview] = useState<string | null>(null);
-  const [frontImageFolder, setFrontImageFolder] = useState("");
-  const [backImageFolder, setBackImageFolder] = useState("");
 
   // Handle type change and reset chapter
   const handleTypeChange = (type: string) => {
     setTopicType(type);
     setTopicChapter("");
-    setFrontImageFolder("");
-    setBackImageFolder("");
   };
 
-  // Get available folder paths based on selected type
-  const availableFolderPaths = topicType ? FOLDER_PATH_OPTIONS[topicType] || [] : [];
+  // Get available chapter/week options based on selected type
+  const availableChapterOptions = topicType ? CHAPTER_OPTIONS[topicType] || [] : [];
 
   // Combine type and chapter to create topic value
   const topic = topicType && topicChapter ? `${topicType}-${topicChapter}` : "";
+
+  // Auto-generate folder path based on topic
+  const folderPath = topic ? `${topicType}/${topicType}-${topicChapter}` : "";
 
   // Handle image selection
   const handleFrontImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,31 +77,35 @@ export default function CreateFlashCard() {
   const removeFrontImage = () => {
     setFrontImageFile(null);
     setFrontImagePreview(null);
-    setFrontImageFolder("");
   };
 
   const removeBackImage = () => {
     setBackImageFile(null);
     setBackImagePreview(null);
-    setBackImageFolder("");
+  };
+
+  // Show notification helper
+  const showNotification = (message: string) => {
+    setNotifMessage(message);
+    setIsNotifOpen(true);
   };
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
 
     try {
-      // Validate that images have folders selected
-      if (frontImageFile && !frontImageFolder) {
-        setError("Please select a folder path for the front image");
+      // Comprehensive validation
+      if (!topic) {
+        showNotification("Please select both type and chapter/week");
         setLoading(false);
         return;
       }
 
-      if (backImageFile && !backImageFolder) {
-        setError("Please select a folder path for the back image");
+      // Ensure at least some content exists
+      if (!frontText && !frontImageFile && !backText && !backImageFile) {
+        showNotification("Please add at least some content (text or image) to the flash card");
         setLoading(false);
         return;
       }
@@ -113,17 +113,17 @@ export default function CreateFlashCard() {
       // Create FormData
       const formData = new FormData();
       formData.append("topic", topic);
-      formData.append("frontText", frontText);
-      formData.append("backText", backText);
+      formData.append("frontText", frontText.trim());
+      formData.append("backText", backText.trim());
 
       if (frontImageFile) {
         formData.append("frontImage", frontImageFile);
-        formData.append("frontImageFolder", frontImageFolder);
+        formData.append("frontImageFolder", folderPath);
       }
 
       if (backImageFile) {
         formData.append("backImage", backImageFile);
-        formData.append("backImageFolder", backImageFolder);
+        formData.append("backImageFolder", folderPath);
       }
 
       // Call server action
@@ -132,10 +132,14 @@ export default function CreateFlashCard() {
         body: formData,
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const result = await response.json();
 
       if (!result.success) {
-        setError(result.error || "Failed to create flash card");
+        showNotification(result.error || "Failed to create flash card");
         setLoading(false);
         return;
       }
@@ -144,7 +148,7 @@ export default function CreateFlashCard() {
       router.push("/cms/flash-cards");
     } catch (err) {
       console.error("Error:", err);
-      setError("Failed to create flash card");
+      showNotification(err instanceof Error ? err.message : "Failed to create flash card");
       setLoading(false);
     }
   };
@@ -161,14 +165,10 @@ export default function CreateFlashCard() {
     <main className="min-h-screen overflow-hidden bg-zinc-950 text-white">
       <Navbar />
 
+      <StackedNotification isNotifOpen={isNotifOpen} setIsNotifOpen={setIsNotifOpen} message={notifMessage} />
+
       <section className="pt-32 px-6 max-w-3xl mx-auto pb-12">
         <h1 className="text-4xl font-bold mb-8">Create Flash Card</h1>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-900/50 border border-red-700 rounded-lg">
-            <p className="text-red-200">{error}</p>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Topic Type - Required */}
@@ -192,10 +192,10 @@ export default function CreateFlashCard() {
             </select>
           </div>
 
-          {/* Chapter - Required */}
+          {/* Chapter/Week - Required */}
           <div>
             <label htmlFor="topicChapter" className="block text-sm font-semibold mb-2">
-              Chapter <span className="text-red-500">*</span>
+              {topicType === "lecture" ? "Chapter" : topicType === "lab" ? "Week" : "Chapter/Week"} <span className="text-red-500">*</span>
             </label>
             <select
               id="topicChapter"
@@ -205,8 +205,8 @@ export default function CreateFlashCard() {
               required
               disabled={!topicType}
             >
-              <option value="">{topicType ? "Select chapter..." : "Select type first..."}</option>
-              {CHAPTER_OPTIONS.map((option) => (
+              <option value="">{topicType ? `Select ${topicType === "lecture" ? "chapter" : "week"}...` : "Select type first..."}</option>
+              {availableChapterOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -215,6 +215,11 @@ export default function CreateFlashCard() {
             {topic && (
               <p className="mt-1 text-xs text-zinc-400">
                 Topic: <span className="font-mono text-indigo-400">{topic}</span>
+                {folderPath && (
+                  <span className="ml-3">
+                    Folder: <span className="font-mono text-green-400">{folderPath}</span>
+                  </span>
+                )}
               </p>
             )}
           </div>
@@ -255,26 +260,11 @@ export default function CreateFlashCard() {
               </div>
             )}
 
-            {frontImagePreview && (
-              <div className="mt-3">
-                <label htmlFor="frontImageFolder" className="block text-xs font-semibold mb-1 text-zinc-400">
-                  Folder Path <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="frontImageFolder"
-                  value={frontImageFolder}
-                  onChange={(e) => setFrontImageFolder(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  required
-                  disabled={!topicType}
-                >
-                  <option value="">{topicType ? "Select folder path..." : "Select type first..."}</option>
-                  {availableFolderPaths.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+            {frontImagePreview && folderPath && (
+              <div className="mt-3 p-3 bg-zinc-800/50 border border-zinc-700 rounded">
+                <p className="text-xs text-zinc-400">
+                  Image will be saved to: <span className="font-mono text-green-400">{folderPath}</span>
+                </p>
               </div>
             )}
           </div>
@@ -315,26 +305,11 @@ export default function CreateFlashCard() {
               </div>
             )}
 
-            {backImagePreview && (
-              <div className="mt-3">
-                <label htmlFor="backImageFolder" className="block text-xs font-semibold mb-1 text-zinc-400">
-                  Folder Path <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="backImageFolder"
-                  value={backImageFolder}
-                  onChange={(e) => setBackImageFolder(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  required
-                  disabled={!topicType}
-                >
-                  <option value="">{topicType ? "Select folder path..." : "Select type first..."}</option>
-                  {availableFolderPaths.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+            {backImagePreview && folderPath && (
+              <div className="mt-3 p-3 bg-zinc-800/50 border border-zinc-700 rounded">
+                <p className="text-xs text-zinc-400">
+                  Image will be saved to: <span className="font-mono text-green-400">{folderPath}</span>
+                </p>
               </div>
             )}
           </div>
