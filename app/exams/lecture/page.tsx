@@ -14,7 +14,6 @@ export default function LectureExamHome() {
   );
 }
 
-// TODO: Reorganize cards
 const Exams = () => {
   return (
     <section className="relative z-20 mx-auto flex h-full max-w-6xl flex-col items-center justify-center px-4 py-24 md:px-8 md:py-36">

@@ -164,7 +164,7 @@ export default function CMSFlashCards() {
     return acc;
   }, {} as Record<string, FlashCardType[]>);
 
-  // Custom sort: Lecture first, then Lab, then alphabetically
+  // Custom sort: Lecture first (numerically), then Lab (numerically), then alphabetically
   const sortedTopics = Object.keys(groupedCards).sort((a, b) => {
     const aLower = a.toLowerCase();
     const bLower = b.toLowerCase();
@@ -178,9 +178,19 @@ export default function CMSFlashCards() {
     if (aIsLecture && !bIsLecture) return -1;
     if (!aIsLecture && bIsLecture) return 1;
 
-    // Lab comes second
+    // If both are lectures, sort numerically
+    if (aIsLecture && bIsLecture) {
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+    }
+
+    // Lab comes second (with numeric sorting)
     if (aIsLab && !bIsLab) return -1;
     if (!aIsLab && bIsLab) return 1;
+
+    // If both are labs, sort numerically
+    if (aIsLab && bIsLab) {
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+    }
 
     // Otherwise alphabetical
     return a.localeCompare(b);
@@ -188,9 +198,10 @@ export default function CMSFlashCards() {
 
   sortedTopics.forEach((topic) => {
     groupedCards[topic].sort((a, b) => {
-      const idA = String(a.id);
-      const idB = String(b.id);
-      return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: "base" });
+      // Sort by created_at date (newest first)
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateB - dateA;
     });
   });
 

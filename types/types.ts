@@ -71,6 +71,7 @@ export interface FlashCardType {
   backImage?: string;
   grade: number;
   attempts: number;
+  created_at: string;
 }
 
 export interface KanbanCardPropsType {
