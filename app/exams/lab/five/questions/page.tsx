@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import ExamQuestions from "@/app/_components/_exams/ExamQuestions";
 
-export default async function LabExamFourQuestions() {
+export default async function LabExamFiveQuestions() {
   const supabase = await createClient();
 
   // Fetch questions for lab exam 5
@@ -35,9 +35,6 @@ export default async function LabExamFourQuestions() {
     );
   }
 
-  // Shuffle and select 30 random questions
-  const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
-  const selectedQuestions = shuffled.slice(0, 30);
-
-  return <ExamQuestions multipleChoiceQuestions={selectedQuestions} examNumber={5} examType="lab" />;
+  // Pass all questions to the component - it will handle shuffling and selection
+  return <ExamQuestions multipleChoiceQuestions={allQuestions} examNumber={5} examType="lab" />;
 }

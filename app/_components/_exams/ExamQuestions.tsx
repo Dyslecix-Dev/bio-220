@@ -137,7 +137,7 @@ export default function ExamQuestions({ multipleChoiceQuestions, examNumber, exa
 
   return (
     <main className="min-h-screen overflow-hidden bg-zinc-950">
-      <Countdown onTimeUp={handleTimeUp} hours={0} minutes={0} seconds={10} isSubmitted={isSubmitted} onElapsedTimeChange={setElapsedTime} />
+      <Countdown onTimeUp={handleTimeUp} hours={60} minutes={0} seconds={1} isSubmitted={isSubmitted} onElapsedTimeChange={setElapsedTime} />
       <Questions
         multipleChoiceQuestions={multipleChoiceQuestions}
         isSubmitted={isSubmitted}

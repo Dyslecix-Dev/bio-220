@@ -30,7 +30,7 @@ export default function ExamIntro({ examNumber, examLink, examType = "lecture" }
             <br />
             {examType === "lab" ? "Lab" : "Lecture"} Exam {examNumber}
           </h3>
-          <p className="mb-8 mt-4 text-lg text-slate-400">This is a timed test with 30 randomly generated questions (select all that apply). You have 30 minutes to complete it.</p>
+          <p className="mb-8 mt-4 text-lg text-slate-400">This is a timed test with 30 randomly generated questions (select all that apply). You have 60 minutes to complete it.</p>
           <Link
             href={`/exams/${examType}/${examLink}/questions`}
             className="bg-indigo-500 text-white font-medium py-2 px-4 rounded transition-all hover:bg-indigo-600 active:scale-95 duration-300 cursor-pointer inline-block"

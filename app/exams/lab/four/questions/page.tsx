@@ -35,9 +35,6 @@ export default async function LabExamFourQuestions() {
     );
   }
 
-  // Shuffle and select 30 random questions
-  const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
-  const selectedQuestions = shuffled.slice(0, 30);
-
-  return <ExamQuestions multipleChoiceQuestions={selectedQuestions} examNumber={4} examType="lab" />;
+  // Pass all questions to the component - it will handle shuffling and selection
+  return <ExamQuestions multipleChoiceQuestions={allQuestions} examNumber={4} examType="lab" />;
 }

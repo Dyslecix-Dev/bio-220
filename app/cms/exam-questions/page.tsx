@@ -126,6 +126,13 @@ export default function CMSExamQuestions() {
     return acc;
   }, {} as Record<string, ExamQuestionType[]>);
 
+  // Sort questions within each group by created_at (most recent first)
+  Object.keys(groupedQuestions).forEach((key) => {
+    groupedQuestions[key].sort((a, b) => {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  });
+
   // Sort groups: lecture first (1-16), then lab (1-14)
   const sortedGroups = Object.keys(groupedQuestions).sort((a, b) => {
     const [typeA, numA] = a.split("-");
