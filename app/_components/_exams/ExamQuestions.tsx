@@ -375,7 +375,7 @@ const Questions: FC<FinalQuestionsType> = ({
 
               <button
                 onClick={() => window.location.reload()}
-                className="font-semibold py-3 px-8 rounded-lg transition-colors duration-200 flex justify-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white cursor-pointer"
+                className="font-semibold py-3 px-8 rounded-lg transition-colors duration-200 flex justify-center items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white cursor-pointer"
               >
                 Retake Test
                 <FiArrowRight />

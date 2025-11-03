@@ -42,18 +42,17 @@ const BasicFAQ = () => {
           <p>You bet! My name is Christian Demesa and I&apos;m a software developer with almost four years of experience. Send me an inquiry at dyslecixdev@gmail.com!</p>
         </Question>
 
-        {/* TODO */}
-        {/* <Question title="Thank you to all these wonderful people!">
+        <Question title="Thank you to all these wonderful people!">
           <p>
-            Huge shoutout to Andrew Ngo, Brenda Beltran, and Nicole Lees for providing me with questions for the mock lecture exams.
+            Huge shoutout to Nicole Lees for providing me with flash cards!
             <br />
             <br />
-            Also thank you to my beta testers: Alistaire Trinidad, Andrew Ngo, Brenda Beltran, Ivan Tafoya, Nicole Bachoura, Nicole Lees, Jasmine Aguilar, and Juliana Diaz.
+            Also thank you to my beta testers: Andrew Ngo, Axel Garcia, Brenda Beltran, Chris Cao, Lucy Velasco, Nicole Lees, Priscilla Ponce, Sebastian Andrade, and Sergio Bedros
+            {/* <br />
             <br />
-            <br />
-            Last but not least, thank you again Andrew Ngo for providing the images for the mock lab exams.
+            Last but not least, thank you again Andrew Ngo for providing the images for the mock lab exams. */}
           </p>
-        </Question> */}
+        </Question>
       </div>
     </div>
   );
