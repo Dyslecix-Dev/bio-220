@@ -14,15 +14,20 @@ const EXAM_TYPE_OPTIONS = [
   { value: "lab", label: "Lab" },
 ];
 
+// Restricted to only specific exams
 const EXAM_NUMBER_OPTIONS: Record<string, { value: string; label: string }[]> = {
-  lecture: Array.from({ length: 13 }, (_, i) => ({
-    value: String(i + 1),
-    label: `Chapter ${i + 1}`,
-  })),
-  lab: Array.from({ length: 14 }, (_, i) => ({
-    value: String(i + 1),
-    label: `Week ${i + 1}`,
-  })),
+  lecture: [
+    { value: "1", label: "1" },
+    { value: "2", label: "2" },
+    { value: "3", label: "3" },
+  ],
+  lab: [
+    { value: "1", label: "1" },
+    { value: "2", label: "2" },
+    { value: "3", label: "3" },
+    { value: "4", label: "4" },
+    { value: "5", label: "5" },
+  ],
 };
 
 type OptionType = {
@@ -220,7 +225,7 @@ export default function CreateExamQuestion() {
           {/* Exam Number - Required */}
           <div>
             <label htmlFor="examNumber" className="block text-sm font-semibold mb-2">
-              {examType === "lecture" ? "Chapter" : examType === "lab" ? "Week" : "Exam Number"} <span className="text-red-500">*</span>
+              Exam Number <span className="text-red-500">*</span>
             </label>
             <select
               id="examNumber"
@@ -230,14 +235,14 @@ export default function CreateExamQuestion() {
               required
               disabled={!examType}
             >
-              <option value="">{examType === "lecture" ? "Select chapter..." : examType === "lab" ? "Select week..." : "Select exam type first..."}</option>
+              <option value="">{examType ? "Select exam number..." : "Select exam type first..."}</option>
               {availableExamNumbers.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
             </select>
-            {examType && <p className="mt-1 text-xs text-zinc-400">{examType === "lecture" ? "Chapters 1-16" : "Weeks 1-14"}</p>}
+            {examType && <p className="mt-1 text-xs text-zinc-400">{examType === "lecture" ? "Available: 1-3" : "Available: 1-5"}</p>}
           </div>
 
           {/* Question - Required */}
@@ -267,7 +272,7 @@ export default function CreateExamQuestion() {
                 <button
                   type="button"
                   onClick={addOption}
-                  className="flex items-center gap-2 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 rounded text-sm font-semibold transition-colors cursor-pointer"
+                  className="flex items-center gap-2 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 rounded text-sm font-semibold transition-colors transition-300 cursor-pointer"
                 >
                   <FiPlus /> Add Option
                 </button>
@@ -276,7 +281,7 @@ export default function CreateExamQuestion() {
 
             <div className="space-y-3">
               {options.map((option, index) => (
-                <div key={index} className="flex items-start gap-2">
+                <div key={index} className="flex items-center gap-2">
                   {/* Option Letter */}
                   <div className="flex-shrink-0 w-8 h-10 flex items-center justify-center bg-zinc-700 rounded text-sm font-semibold">{String.fromCharCode(65 + index)}</div>
 

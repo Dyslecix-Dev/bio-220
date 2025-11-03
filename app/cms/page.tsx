@@ -14,7 +14,7 @@ export default function CMS() {
       <section className="flex flex-col lg:flex-row space-y-10 lg:space-y-0 lg:space-x-40 mt-20 lg:mt-0">
         <Link href="/cms/flash-cards" className="flex flex-col items-center justify-evenly p-10 border border-white">
           <PiCards className="text-7xl" />
-          <p className="text-5xl text-center">Edit Flash Cards</p>
+          <p className="text-5xl text-center">Flash Cards</p>
         </Link>
 
         <Link href="/cms/exam-questions" className="flex flex-col items-center justify-evenly p-10 border border-white">
