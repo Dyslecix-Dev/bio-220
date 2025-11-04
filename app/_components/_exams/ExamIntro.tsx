@@ -20,25 +20,42 @@ export default function ExamIntro({ examNumber, examLink, examType = "lecture" }
   };
 
   return (
-    <main className="min-h-screen w-full flex items-center justify-center bg-zinc-950 text-zinc-100 relative">
+    <main className="min-h-screen w-full flex items-center justify-center bg-zinc-950 text-zinc-100 relative px-4 py-8 md:py-0">
       <GlowingDotsBackground />
 
-      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-16 md:grid-cols-2 md:gap-8 relative z-10">
-        <div>
-          <h3 className="text-5xl font-black leading-[1.25] md:text-7xl">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 md:gap-16 md:grid-cols-2 relative z-10 w-full">
+        <div className="text-center md:text-left">
+          <h3 className="text-4xl sm:text-5xl font-black leading-[1.25] md:text-7xl">
             BIO 220
             <br />
             {examType === "lab" ? "Lab" : "Lecture"} Exam {examNumber}
           </h3>
-          <p className="mb-8 mt-4 text-lg text-slate-400">This is a timed test with 30 randomly generated questions (select all that apply). You have 60 minutes to complete it.</p>
+          <p className="mb-8 mt-4 text-base sm:text-lg text-slate-400">This is a timed test with 30 randomly generated questions (select all that apply). You have 60 minutes to complete it.</p>
           <Link
             href={`/exams/${examType}/${examLink}/questions`}
-            className="bg-indigo-500 text-white font-medium py-2 px-4 rounded transition-all hover:bg-indigo-600 active:scale-95 duration-300 cursor-pointer inline-block"
+            className="bg-indigo-500 text-white font-medium py-3 px-6 rounded transition-all hover:bg-indigo-600 active:scale-95 duration-300 cursor-pointer inline-block"
           >
             Start Test
           </Link>
         </div>
-        <div className="relative h-[450px] w-[350px]">
+
+        {/* Mobile static card */}
+        <div className="relative h-[350px] w-full max-w-[280px] mx-auto md:hidden">
+          <div className="flex h-full w-full select-none items-center justify-center rounded-2xl border-2 border-slate-700 bg-slate-800/20 p-1 shadow-xl backdrop-blur-md">
+            <div className="relative h-[98%] w-[98%] overflow-hidden rounded-xl">
+              <Image
+                src="https://images.unsplash.com/photo-1707079918151-d5931af83f06?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=801g"
+                alt="Red and green microbes"
+                loading="eager"
+                fill
+                className="pointer-events-none object-cover"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop draggable cards */}
+        <div className="relative h-[350px] w-full max-w-[280px] sm:h-[400px] sm:max-w-[320px] md:h-[450px] md:max-w-[350px] mx-auto md:mx-0 hidden md:block">
           <Card
             imgUrl="https://images.unsplash.com/photo-1707079918151-d5931af83f06?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=801g"
             imgAlt="Red and green microbes"
@@ -73,14 +90,28 @@ interface CardProps {
 const Card = ({ handleShuffle, position, imgUrl, imgAlt }: CardProps) => {
   const mousePosRef = useRef(0);
 
-  const onDragStart = (e: MouseEvent) => {
-    mousePosRef.current = e.clientX;
+  const onDragStart = (e: MouseEvent | TouchEvent | PointerEvent) => {
+    // Handle both mouse and touch events
+    let clientX = 0;
+    if ("clientX" in e) {
+      clientX = e.clientX;
+    } else if ("touches" in e && e.touches[0]) {
+      clientX = e.touches[0].clientX;
+    }
+    mousePosRef.current = clientX;
   };
 
-  const onDragEnd = (e: MouseEvent) => {
-    const diff = mousePosRef.current - e.clientX;
+  const onDragEnd = (e: MouseEvent | TouchEvent | PointerEvent) => {
+    // Handle both mouse and touch events
+    let clientX = 0;
+    if ("clientX" in e) {
+      clientX = e.clientX;
+    } else if ("changedTouches" in e && e.changedTouches[0]) {
+      clientX = e.changedTouches[0].clientX;
+    }
+    const diff = mousePosRef.current - clientX;
 
-    if (diff > 150) {
+    if (diff > 100) {
       handleShuffle();
     }
 

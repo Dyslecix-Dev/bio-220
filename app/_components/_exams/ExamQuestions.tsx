@@ -2,10 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef, useCallback, FC } from "react";
+import { FaArrowRotateRight } from "react-icons/fa6";
 import { FiArrowRight, FiHome, FiClock } from "react-icons/fi";
 
 import Countdown from "@/app/_components/Countdown";
 import GlowingDotsBackground from "@/app/_components/_backgrounds/GlowingDotsBackground";
+import ShuffleLoader from "@/app/_components/ShuffleLoader";
 import StackedNotification from "@/app/_components/StackedNotification";
 
 import { createClient } from "@/utils/supabase/client";
@@ -195,11 +197,23 @@ const Questions: FC<FinalQuestionsType> = ({
 }) => {
   const [selectedMultipleChoice, setSelectedMultipleChoice] = useState<QuestionType[]>([]);
   const [answers, setAnswers] = useState<Record<string, number[]>>({});
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const randomMC = getRandomElements(multipleChoiceQuestions, 30);
-    const shuffledMC = shuffleOptions(randomMC);
-    setSelectedMultipleChoice(shuffledMC);
+    // Simulate loading time for question preparation
+    const prepareQuestions = async () => {
+      setLoading(true);
+      // Add a small delay to ensure smooth loading experience
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const randomMC = getRandomElements(multipleChoiceQuestions, 30);
+      const shuffledMC = shuffleOptions(randomMC);
+      setSelectedMultipleChoice(shuffledMC);
+
+      setLoading(false);
+    };
+
+    prepareQuestions();
   }, [multipleChoiceQuestions]);
 
   const handleAnswerChange = (questionIndex: number, optionIndex: number, questionType: string) => {
@@ -269,6 +283,14 @@ const Questions: FC<FinalQuestionsType> = ({
   const handleReturnToDashboard = () => {
     router.push("/");
   };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen overflow-hidden bg-zinc-950 flex items-center justify-center">
+        <ShuffleLoader />
+      </main>
+    );
+  }
 
   return (
     <section className="relative z-20 mx-auto flex h-full max-w-6xl flex-col items-center justify-center px-4 py-24 md:px-8 md:py-36">
@@ -377,8 +399,8 @@ const Questions: FC<FinalQuestionsType> = ({
                 onClick={() => window.location.reload()}
                 className="font-semibold py-3 px-8 rounded-lg transition-colors duration-200 flex justify-center items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white cursor-pointer"
               >
+                <FaArrowRotateRight />
                 Retake Test
-                <FiArrowRight />
               </button>
             </div>
           )}
