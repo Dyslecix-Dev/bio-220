@@ -169,10 +169,16 @@ export default function FlashCardComponent({
     setIsReviewMode(true);
   }, []);
 
+  const handleCancelReview = useCallback(() => {
+    setIsReviewMode(false);
+    setReviewCards([]);
+    setCurrentCardIndex(0);
+  }, []);
+
   if (isReviewMode) {
     return (
       <div className="min-h-screen bg-zinc-950">
-        <ReviewMode card={reviewCards[currentCardIndex]} onDifficultySelect={handleDifficultySelect} currentIndex={currentCardIndex} totalCards={reviewCards.length} />
+        <ReviewMode card={reviewCards[currentCardIndex]} onDifficultySelect={handleDifficultySelect} currentIndex={currentCardIndex} totalCards={reviewCards.length} onCancel={handleCancelReview} />
       </div>
     );
   }
@@ -381,8 +387,43 @@ const ReviewInterface = ({ onStartReview, selectedCategory, fetchFlashCards }: {
   );
 };
 
-const ReviewMode = ({ card, onDifficultySelect, currentIndex, totalCards }: { card: FlashCardType; onDifficultySelect: (difficulty: string) => void; currentIndex: number; totalCards: number }) => {
+const FlashCardSkeleton = () => {
+  return (
+    <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl aspect-square mb-6 sm:mb-8">
+      <div className="relative w-full h-full rounded-2xl bg-neutral-800 shadow-xl overflow-hidden">
+        <div className="absolute inset-0 flex items-center justify-center">
+          {/* Animated pulse effect */}
+          <div className="w-full h-full bg-gradient-to-r from-neutral-800 via-neutral-700 to-neutral-800 animate-pulse" />
+
+          {/* Loading indicator */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="flex space-x-2">
+              <div className="w-3 h-3 bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+              <div className="w-3 h-3 bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+              <div className="w-3 h-3 bg-neutral-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ReviewMode = ({
+  card,
+  onDifficultySelect,
+  currentIndex,
+  totalCards,
+  onCancel,
+}: {
+  card: FlashCardType;
+  onDifficultySelect: (difficulty: string) => void;
+  currentIndex: number;
+  totalCards: number;
+  onCancel: () => void;
+}) => {
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
+  const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
 
   useEffect(() => {
     setIsFlipped(false);
@@ -390,8 +431,11 @@ const ReviewMode = ({ card, onDifficultySelect, currentIndex, totalCards }: { ca
 
   const handleDifficultySelect = async (difficulty: string) => {
     setIsFlipped(false);
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    setIsTransitioning(true);
+    await new Promise((resolve) => setTimeout(resolve, 300));
     onDifficultySelect(difficulty);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    setIsTransitioning(false);
   };
 
   const difficultyButtons = [
@@ -411,92 +455,106 @@ const ReviewMode = ({ card, onDifficultySelect, currentIndex, totalCards }: { ca
 
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
+      {/* Cancel button */}
+      <button
+        onClick={onCancel}
+        className="absolute top-4 sm:top-8 left-4 sm:left-8 bg-transparent hover:bg-red-700 text-red-700 hover:text-slate-100 font-medium py-2 px-4 sm:px-6 border-1 border-red-700 rounded-lg transition-all duration-300 active:scale-95 cursor-pointer z-10"
+      >
+        Cancel
+      </button>
+
       {/* Progress indicator */}
       <div className="absolute top-4 sm:top-8 right-4 sm:right-8 text-white text-base sm:text-lg font-medium">
         {currentIndex + 1} / {totalCards}
       </div>
 
-      {/* Big Card */}
-      <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl aspect-square cursor-pointer mb-6 sm:mb-8" onClick={() => setIsFlipped(!isFlipped)}>
-        <motion.div className="relative w-full h-full" style={{ transformStyle: "preserve-3d" }} animate={{ rotateY: isFlipped ? 180 : 0 }} transition={{ duration: 0.6, ease: "easeInOut" }}>
-          {/* Front of card */}
-          <div className="absolute inset-0 w-full h-full rounded-2xl bg-neutral-100 shadow-xl overflow-hidden" style={{ backfaceVisibility: "hidden" }}>
-            {card.frontImage ? (
-              // When frontImage exists, show image with text below
-              <div className="flex flex-col h-full">
-                <div className="flex-1 relative">
-                  <Image src={card.frontImage} alt="Front of card" fill={true} className="object-contain" />
-                </div>
-                {card.frontText && (
-                  <div className="p-4 sm:p-6 bg-neutral-100 border-t border-neutral-200">
-                    <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-black text-center leading-tight">{card.frontText}</h3>
+      {/* Big Card or Skeleton */}
+      {isTransitioning ? (
+        <FlashCardSkeleton />
+      ) : (
+        <>
+          <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl aspect-square cursor-pointer mb-6 sm:mb-8" onClick={() => setIsFlipped(!isFlipped)}>
+            <motion.div className="relative w-full h-full" style={{ transformStyle: "preserve-3d" }} animate={{ rotateY: isFlipped ? 180 : 0 }} transition={{ duration: 0.6, ease: "easeInOut" }}>
+              {/* Front of card */}
+              <div className="absolute inset-0 w-full h-full rounded-2xl bg-neutral-100 shadow-xl overflow-hidden" style={{ backfaceVisibility: "hidden" }}>
+                {card.frontImage ? (
+                  // When frontImage exists, show image with text below
+                  <div className="flex flex-col h-full">
+                    <div className="flex-1 relative">
+                      <Image src={card.frontImage} alt="Front of card" fill={true} className="object-contain" />
+                    </div>
+                    {card.frontText && (
+                      <div className="p-4 sm:p-6 bg-neutral-100 border-t border-neutral-200">
+                        <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-black text-center leading-tight">{card.frontText}</h3>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // When no frontImage, center the text
+                  <div className="absolute inset-0 p-6 sm:p-8 md:p-12 overflow-auto flex items-center justify-center">
+                    {card.frontText && <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-black text-center leading-tight">{card.frontText}</h3>}
                   </div>
                 )}
               </div>
-            ) : (
-              // When no frontImage, center the text
-              <div className="absolute inset-0 p-6 sm:p-8 md:p-12 overflow-auto flex items-center justify-center">
-                {card.frontText && <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-black text-center leading-tight">{card.frontText}</h3>}
-              </div>
-            )}
-          </div>
 
-          {/* Back of card */}
-          <div
-            className="absolute inset-0 w-full h-full rounded-2xl bg-neutral-700 shadow-xl overflow-hidden"
-            style={{
-              backfaceVisibility: "hidden",
-              transform: "rotateY(180deg)",
-            }}
-          >
-            {card.backImage ? (
-              // When backImage exists, show image with text below
-              <div className="flex flex-col h-full">
-                <div className="flex-1 relative">
-                  <Image src={card.backImage} alt="Back of card" fill={true} className="object-contain" />
-                </div>
-                {card.backText && (
-                  <div className="p-4 sm:p-6 bg-neutral-700 border-t border-neutral-600">
-                    <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white text-center leading-tight">{card.backText}</h3>
+              {/* Back of card */}
+              <div
+                className="absolute inset-0 w-full h-full rounded-2xl bg-neutral-700 shadow-xl overflow-hidden"
+                style={{
+                  backfaceVisibility: "hidden",
+                  transform: "rotateY(180deg)",
+                }}
+              >
+                {card.backImage ? (
+                  // When backImage exists, show image with text below
+                  <div className="flex flex-col h-full">
+                    <div className="flex-1 relative">
+                      <Image src={card.backImage} alt="Back of card" fill={true} className="object-contain" />
+                    </div>
+                    {card.backText && (
+                      <div className="p-4 sm:p-6 bg-neutral-700 border-t border-neutral-600">
+                        <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white text-center leading-tight">{card.backText}</h3>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // When no backImage, center the text
+                  <div className="absolute inset-0 p-6 sm:p-8 md:p-12 overflow-auto flex items-center justify-center">
+                    {card.backText && <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-white text-center leading-tight">{card.backText}</h3>}
                   </div>
                 )}
               </div>
-            ) : (
-              // When no backImage, center the text
-              <div className="absolute inset-0 p-6 sm:p-8 md:p-12 overflow-auto flex items-center justify-center">
-                {card.backText && <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-white text-center leading-tight">{card.backText}</h3>}
-              </div>
-            )}
+            </motion.div>
           </div>
-        </motion.div>
-      </div>
 
-      {/* Difficulty buttons */}
-      {isFlipped && (
-        <motion.div
-          className="w-full max-w-sm sm:max-w-md md:max-w-lg grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-4 px-4 sm:px-0"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          {difficultyButtons.map((button) => (
-            <button
-              key={button.value}
-              onClick={() => handleDifficultySelect(button.value)}
-              className={`
+          {/* Difficulty buttons */}
+          {isFlipped && (
+            <motion.div
+              className="w-full max-w-sm sm:max-w-md md:max-w-lg grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-4 px-4 sm:px-0"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {difficultyButtons.map((button) => (
+                <button
+                  key={button.value}
+                  onClick={() => handleDifficultySelect(button.value)}
+                  className={`
                 px-3 sm:px-6 md:px-8 py-3 sm:py-4 ${button.color} text-white font-medium rounded-lg 
                 transition-colors duration-200 text-sm sm:text-base md:text-lg cursor-pointer
                 flex-1 sm:flex-none
               `}
-            >
-              {button.label}
-            </button>
-          ))}
-        </motion.div>
-      )}
+                >
+                  {button.label}
+                </button>
+              ))}
+            </motion.div>
+          )}
 
-      {/* Instruction text */}
-      {!isFlipped && <div className="text-zinc-400 text-center text-sm sm:text-base md:text-lg px-4">Click the card to reveal the answer</div>}
+          {/* Instruction text */}
+          {!isFlipped && <div className="text-zinc-400 text-center text-sm sm:text-base md:text-lg px-4">Click the card to reveal the answer</div>}
+        </>
+      )}
     </div>
   );
 };
