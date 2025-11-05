@@ -11,7 +11,7 @@ import GlowingDotsBackground from "@/app/_components/_backgrounds/GlowingDotsBac
 
 import { FAQuestionType } from "@/types/types";
 
-export default function FAQ() {
+export default function Updates() {
   return (
     <main className="min-h-screen overflow-hidden bg-zinc-950">
       <Navbar />
@@ -25,33 +25,13 @@ const BasicFAQ = () => {
   return (
     <div className="relative z-20 mx-auto flex h-full max-w-6xl flex-col items-center justify-center px-4 py-24 md:px-8 md:py-36">
       <div className="p-5 mx-auto max-w-3xl bg-slate-800 rounded-xl">
-        <h3 className="mb-4 text-center text-3xl font-semibold text-white">Frequently asked questions</h3>
-        <Question title="What is the purpose of this website?" defaultOpen>
-          <p>To help my fellow Citrus college students in BIO 220.</p>
+        <h3 className="mb-4 text-center text-3xl font-semibold text-white">Website updates</h3>
+        <Question title="November 4th, 2025" defaultOpen>
+          <p>Added the &quot;Updates&quot; page. Also added the ability for users to report flash cards and exam questions with misinformation.</p>
         </Question>
 
-        {/* <Question title="Why is there a leaderboard?">
-          <p>It&apos;s a fun and easy way to see who is doing well in the class. That way students know who they can ask for help.</p>
-        </Question> */}
-
-        <Question title="Will you provide future features, like other subjects?">
-          <p>Currently, I don&apos;t have any plans to. If you have a suggestion, please send me an email at dyslecixdev@gmail.com!</p>
-        </Question>
-
-        <Question title="Damn, this is a sick website! Can you make one for me?">
-          <p>You bet! My name is Christian Demesa and I&apos;m a software developer with almost four years of experience. Send me an inquiry at dyslecixdev@gmail.com!</p>
-        </Question>
-
-        <Question title="Thank you to all these wonderful people!">
-          <p>
-            Huge shoutout to Andrew Ngo, Brenda Beltran, Nicole Lees, and Isabella Qamar for providing me with their notes!
-            <br />
-            <br />
-            Also thank you to my beta testers: Andrew Ngo, Axel Garcia, Brenda Beltran, Chris Cao, Lucy Velasco, Nicole Lees, Priscilla Ponce, Sebastian Andrade, and Sergio Bedros
-            {/* <br />
-            <br />
-            Last but not least, thank you again Andrew Ngo for providing the images for the mock lab exams. */}
-          </p>
+        <Question title="November 2nd, 2025">
+          <p>First official release of the website! Features include flash cards, mock exams, kanban board, and admins adding flash cards and mock exams.</p>
         </Question>
       </div>
     </div>

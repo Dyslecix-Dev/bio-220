@@ -8,28 +8,47 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 
 import Navbar from "@/app/_components/Navbar";
+import ShuffleLoader from "@/app/_components/ShuffleLoader";
 
 export default function CMS() {
+  const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+
   const supabase = createClient();
 
   useEffect(() => {
+    setLoading(true);
+
     const checkAdmin = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (user) {
-        const { data: profile } = await supabase.from("user_profiles").select("admin, email").eq("id", user.id).single();
+        if (user) {
+          const { data: profile } = await supabase.from("user_profiles").select("admin, email").eq("id", user.id).single();
 
-        if (profile?.admin === "admin" && profile?.email === "dyslecixdev@gmail.com") {
-          setIsAdmin(true);
+          if (profile?.admin === "admin" && profile?.email === "dyslecixdev@gmail.com") {
+            setIsAdmin(true);
+          }
         }
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
     checkAdmin();
   }, []);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen overflow-hidden bg-zinc-950 flex items-center justify-center">
+        <ShuffleLoader />
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen overflow-hidden bg-zinc-950 text-white flex items-center justify-center">

@@ -116,7 +116,7 @@ const Logo = ({ color = "white" }) => {
 const NavbarLoadingSkeleton = () => {
   return (
     <div className="flex items-center gap-6">
-      {/* <div className="h-5 w-16 animate-pulse rounded bg-neutral-700" /> */}
+      <div className="h-5 w-16 animate-pulse rounded bg-neutral-700" />
       <div className="h-5 w-16 animate-pulse rounded bg-neutral-700" />
     </div>
   );
@@ -324,6 +324,10 @@ const LINKS = [
   {
     text: "FAQ",
     href: "/faq",
+  },
+  {
+    text: "Updates",
+    href: "/updates",
   },
   // {
   //   text: "Profile",
