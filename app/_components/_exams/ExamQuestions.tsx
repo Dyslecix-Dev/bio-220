@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef, useCallback, FC } from "react";
 import { FaArrowRotateRight } from "react-icons/fa6";
 import { FiArrowRight, FiHome, FiClock } from "react-icons/fi";
+import { IoWarningSharp } from "react-icons/io5";
+import { motion, AnimatePresence } from "motion/react";
 
 import Countdown from "@/app/_components/Countdown";
 import GlowingDotsBackground from "@/app/_components/_backgrounds/GlowingDotsBackground";
@@ -17,7 +19,11 @@ import { QuestionType, ScoreType, FinalExamQuestionsType, FinalQuestionsType, Su
 
 // Helper function to format elapsed time
 const formatElapsedTime = (milliseconds: number): string => {
-  return Math.floor(milliseconds / 1000).toString();
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes} minutes ${seconds} seconds`;
 };
 
 // Helper function to save/update exam score using upsert (requires unique constraint)
@@ -139,7 +145,7 @@ export default function ExamQuestions({ multipleChoiceQuestions, examNumber, exa
 
   return (
     <main className="min-h-screen overflow-hidden bg-zinc-950">
-      <Countdown onTimeUp={handleTimeUp} hours={60} minutes={0} seconds={1} isSubmitted={isSubmitted} onElapsedTimeChange={setElapsedTime} />
+      <Countdown onTimeUp={handleTimeUp} hours={1} minutes={0} seconds={1} isSubmitted={isSubmitted} onElapsedTimeChange={setElapsedTime} />
       <Questions
         multipleChoiceQuestions={multipleChoiceQuestions}
         isSubmitted={isSubmitted}
@@ -153,6 +159,7 @@ export default function ExamQuestions({ multipleChoiceQuestions, examNumber, exa
         setCompletionTime={setCompletionTime}
         examNumber={examNumber}
         examType={examType}
+        showNotification={showNotification}
       />
       <GlowingDotsBackground />
       <StackedNotification isNotifOpen={isNotifOpen} setIsNotifOpen={setIsNotifOpen} message={message} />
@@ -181,7 +188,60 @@ const shuffleOptions = (questions: QuestionType[]): QuestionType[] => {
   }));
 };
 
-const Questions: FC<FinalQuestionsType> = ({
+// Report Modal Component
+const ReportModal = ({ isOpen, onClose, onConfirm, isSubmitting }: { isOpen: boolean; onClose: () => void; onConfirm: () => void; isSubmitting: boolean }) => {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
+
+          {/* Modal */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md z-50"
+          >
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl mx-4">
+              {/* Icon */}
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border-1 border-yellow-500">
+                <IoWarningSharp className="h-6 w-6 text-yellow-500" />
+              </div>
+
+              {/* Title */}
+              <h3 className="text-xl font-bold text-zinc-100 text-center mb-2">Report Misinformation?</h3>
+
+              {/* Description */}
+              <p className="text-zinc-400 text-center mb-6">Are you sure you want to report this question for misinformation? This question will be hidden from all users.</p>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg font-medium transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={onConfirm}
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {isSubmitting ? "Reporting..." : "Report Question"}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
+const Questions: FC<FinalQuestionsType & { showNotification: (msg: string) => void }> = ({
   multipleChoiceQuestions,
   isSubmitted,
   setIsSubmitted,
@@ -194,10 +254,35 @@ const Questions: FC<FinalQuestionsType> = ({
   setCompletionTime,
   examNumber,
   examType,
+  showNotification,
 }) => {
   const [selectedMultipleChoice, setSelectedMultipleChoice] = useState<QuestionType[]>([]);
   const [answers, setAnswers] = useState<Record<string, number[]>>({});
   const [loading, setLoading] = useState<boolean>(true);
+  const [userId, setUserId] = useState<string>("");
+  const [userName, setUserName] = useState<string>("");
+  const [showReportModal, setShowReportModal] = useState<boolean>(false);
+  const [reportingQuestionId, setReportingQuestionId] = useState<string | null>(null);
+  const [submittingReport, setSubmittingReport] = useState<boolean>(false);
+
+  useEffect(() => {
+    const getUserData = async () => {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        setUserId(user.id);
+
+        const { data: profile } = await supabase.from("user_profiles").select("name").eq("id", user.id).single();
+
+        setUserName(profile?.name || user.email || "Anonymous");
+      }
+    };
+
+    getUserData();
+  }, []);
 
   useEffect(() => {
     // Simulate loading time for question preparation
@@ -284,6 +369,54 @@ const Questions: FC<FinalQuestionsType> = ({
     router.push("/");
   };
 
+  const handleReportClick = (questionId: string) => {
+    setReportingQuestionId(questionId);
+    setShowReportModal(true);
+  };
+
+  const handleReportQuestion = async () => {
+    if (!userId || !reportingQuestionId) return;
+
+    setSubmittingReport(true);
+
+    try {
+      const response = await fetch(`/api/exam-questions/${reportingQuestionId}/report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reporterUserId: userId,
+          reporterName: userName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        console.error("Error submitting report:", data.error);
+        showNotification(data.error || "Failed to report question");
+        setSubmittingReport(false);
+        setShowReportModal(false);
+        return;
+      }
+
+      showNotification("Question reported successfully. It will be excluded from future exams.");
+
+      // Remove the question from the current exam view
+      setSelectedMultipleChoice((prev) => prev.filter((q) => q.id !== reportingQuestionId));
+
+      setShowReportModal(false);
+      setSubmittingReport(false);
+      setReportingQuestionId(null);
+    } catch (error) {
+      console.error("Error in handleReportQuestion:", error);
+      showNotification("Failed to report question");
+      setSubmittingReport(false);
+      setShowReportModal(false);
+    }
+  };
+
   if (loading) {
     return (
       <main className="min-h-screen overflow-hidden bg-zinc-950 flex items-center justify-center">
@@ -302,8 +435,17 @@ const Questions: FC<FinalQuestionsType> = ({
               const userAnswers = answers[`mc-${questionIndex}`] || [];
 
               return (
-                <div key={questionIndex} className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
-                  <h3 className="text-xl font-semibold text-white mb-4">
+                <div key={questionIndex} className="bg-zinc-900 rounded-lg p-6 border border-zinc-800 relative">
+                  {/* Report Button */}
+                  <button
+                    onClick={() => handleReportClick(question.id)}
+                    className="absolute top-4 right-4 p-2 bg-yellow-600 hover:bg-yellow-700 rounded-full transition-colors cursor-pointer z-10"
+                    title="Report misinformation"
+                  >
+                    <IoWarningSharp className="text-white" size={16} />
+                  </button>
+
+                  <h3 className="text-xl font-semibold text-white mb-4 pr-12">
                     {questionIndex + 1}. {question.question}
                   </h3>
                   <div className="space-y-3">
@@ -406,6 +548,9 @@ const Questions: FC<FinalQuestionsType> = ({
           )}
         </div>
       </div>
+
+      {/* Report Modal */}
+      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} onConfirm={handleReportQuestion} isSubmitting={submittingReport} />
     </section>
   );
 };

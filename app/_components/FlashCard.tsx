@@ -2,11 +2,13 @@
 
 import Image from "next/image";
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
+import { IoWarningSharp } from "react-icons/io5";
 
 import Navbar from "@/app/_components/Navbar";
 import GlowingDotsBackground from "@/app/_components/_backgrounds/GlowingDotsBackground";
 import ShuffleLoader from "@/app/_components/ShuffleLoader";
+import StackedNotification from "@/app/_components/StackedNotification";
 
 import { createClient } from "@/utils/supabase/client";
 import { updateStudyStreak } from "@/app/utils/studyStreak/updateStudyStreak";
@@ -70,6 +72,8 @@ export default function FlashCardComponent({
   const [reviewCards, setReviewCards] = useState<FlashCardType[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState<number>(0);
   const [flashCards, setFlashCards] = useState<FlashCardType[]>([]);
+  const [isNotifOpen, setIsNotifOpen] = useState<boolean>(false);
+  const [notifMessage, setNotifMessage] = useState<string>("");
 
   // Create a stable callback for updating card progress
   const updateCardProgress = useCallback(
@@ -178,7 +182,16 @@ export default function FlashCardComponent({
   if (isReviewMode) {
     return (
       <div className="min-h-screen bg-zinc-950">
-        <ReviewMode card={reviewCards[currentCardIndex]} onDifficultySelect={handleDifficultySelect} currentIndex={currentCardIndex} totalCards={reviewCards.length} onCancel={handleCancelReview} />
+        <StackedNotification isNotifOpen={isNotifOpen} setIsNotifOpen={setIsNotifOpen} message={notifMessage} />
+        <ReviewMode
+          card={reviewCards[currentCardIndex]}
+          onDifficultySelect={handleDifficultySelect}
+          currentIndex={currentCardIndex}
+          totalCards={reviewCards.length}
+          onCancel={handleCancelReview}
+          setNotifMessage={setNotifMessage}
+          setIsNotifOpen={setIsNotifOpen}
+        />
       </div>
     );
   }
@@ -186,7 +199,16 @@ export default function FlashCardComponent({
   return (
     <main className="min-h-screen overflow-hidden bg-zinc-950">
       <Navbar />
-      <CardGrid tableKey={tableKey} tableValue={tableValue} flashCards={flashCards} setFlashCards={setFlashCards} onStartReview={handleStartReview} />
+      <StackedNotification isNotifOpen={isNotifOpen} setIsNotifOpen={setIsNotifOpen} message={notifMessage} />
+      <CardGrid
+        tableKey={tableKey}
+        tableValue={tableValue}
+        flashCards={flashCards}
+        setFlashCards={setFlashCards}
+        onStartReview={handleStartReview}
+        setNotifMessage={setNotifMessage}
+        setIsNotifOpen={setIsNotifOpen}
+      />
       <GlowingDotsBackground />
     </main>
   );
@@ -198,12 +220,16 @@ const CardGrid = ({
   flashCards,
   setFlashCards,
   onStartReview,
+  setNotifMessage,
+  setIsNotifOpen,
 }: {
   tableKey: string;
   tableValue: string;
   flashCards: FlashCardType[];
   setFlashCards: React.Dispatch<React.SetStateAction<FlashCardType[]>>;
   onStartReview: (numCards: number, cards: FlashCardType[]) => void;
+  setNotifMessage: React.Dispatch<React.SetStateAction<string>>;
+  setIsNotifOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -234,7 +260,8 @@ const CardGrid = ({
             )
           `
         )
-        .eq(tableKey, tableValue);
+        .eq(tableKey, tableValue)
+        .eq("is_hidden", false);
 
       if (error) {
         setError(error.message);
@@ -310,7 +337,7 @@ const CardGrid = ({
       {/* Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8">
         {displayedCards.map((item: FlashCardType) => {
-          return <FlashCard key={item.id} {...item} />;
+          return <FlashCard key={item.id} {...item} setNotifMessage={setNotifMessage} setIsNotifOpen={setIsNotifOpen} onCardHidden={() => fetchFlashCards()} />;
         })}
       </div>
     </div>
@@ -409,25 +436,105 @@ const FlashCardSkeleton = () => {
   );
 };
 
+// Report Modal Component
+const ReportModal = ({ isOpen, onClose, onConfirm, isSubmitting }: { isOpen: boolean; onClose: () => void; onConfirm: () => void; isSubmitting: boolean }) => {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
+
+          {/* Modal */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md z-50"
+          >
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl mx-4">
+              {/* Icon */}
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border-1 border-yellow-500">
+                <IoWarningSharp className="h-6 w-6 text-yellow-500" />
+              </div>
+
+              {/* Title */}
+              <h3 className="text-xl font-bold text-zinc-100 text-center mb-2">Report Misinformation?</h3>
+
+              {/* Description */}
+              <p className="text-zinc-400 text-center mb-6">Are you sure you want to report this card for misinformation? This card will be hidden from all users.</p>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg font-medium transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={onConfirm}
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {isSubmitting ? "Reporting..." : "Report Card"}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
 const ReviewMode = ({
   card,
   onDifficultySelect,
   currentIndex,
   totalCards,
   onCancel,
+  setNotifMessage,
+  setIsNotifOpen,
 }: {
   card: FlashCardType;
   onDifficultySelect: (difficulty: string) => void;
   currentIndex: number;
   totalCards: number;
   onCancel: () => void;
+  setNotifMessage: React.Dispatch<React.SetStateAction<string>>;
+  setIsNotifOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
   const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
+  const [showReportModal, setShowReportModal] = useState<boolean>(false);
+  const [submittingReport, setSubmittingReport] = useState<boolean>(false);
+  const [userId, setUserId] = useState<string>("");
+  const [userName, setUserName] = useState<string>("");
 
   useEffect(() => {
     setIsFlipped(false);
   }, [currentIndex]);
+
+  useEffect(() => {
+    const getUserData = async () => {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        setUserId(user.id);
+
+        const { data: profile } = await supabase.from("user_profiles").select("name").eq("id", user.id).single();
+
+        setUserName(profile?.name || user.email || "Anonymous");
+      }
+    };
+
+    getUserData();
+  }, []);
 
   const handleDifficultySelect = async (difficulty: string) => {
     setIsFlipped(false);
@@ -436,6 +543,56 @@ const ReviewMode = ({
     onDifficultySelect(difficulty);
     await new Promise((resolve) => setTimeout(resolve, 100));
     setIsTransitioning(false);
+  };
+
+  const handleReportCard = async () => {
+    if (!userId || !card) return;
+
+    setSubmittingReport(true);
+
+    try {
+      const response = await fetch(`/api/flash-cards/${card.id}/report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reporterUserId: userId,
+          reporterName: userName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        console.error("Error submitting report:", data.error);
+        setNotifMessage(data.error || "Failed to report card");
+        setIsNotifOpen(true);
+        setSubmittingReport(false);
+        setShowReportModal(false);
+        return;
+      }
+
+      setNotifMessage("Card reported successfully and hidden from all users");
+      setIsNotifOpen(true);
+      setShowReportModal(false);
+      setSubmittingReport(false);
+
+      // Move to next card or cancel review
+      if (currentIndex < totalCards - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        onDifficultySelect("skip");
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        onCancel();
+      }
+    } catch (error) {
+      console.error("Error in handleReportCard:", error);
+      setNotifMessage("Failed to report card");
+      setIsNotifOpen(true);
+      setSubmittingReport(false);
+      setShowReportModal(false);
+    }
   };
 
   const difficultyButtons = [
@@ -463,10 +620,22 @@ const ReviewMode = ({
         Cancel
       </button>
 
+      {/* Report button */}
+      <button
+        onClick={() => setShowReportModal(true)}
+        className="absolute top-4 sm:top-8 left-24 sm:left-36 bg-transparent hover:bg-yellow-600 text-yellow-600 hover:text-slate-100 font-medium py-2 px-4 sm:px-6 border-1 border-yellow-600 rounded-lg transition-all duration-300 active:scale-95 cursor-pointer z-10"
+        title="Report misinformation"
+      >
+        <IoWarningSharp className="h-6 w-6 text-yellow-500" />
+      </button>
+
       {/* Progress indicator */}
       <div className="absolute top-4 sm:top-8 right-4 sm:right-8 text-white text-base sm:text-lg font-medium">
         {currentIndex + 1} / {totalCards}
       </div>
+
+      {/* Report Modal */}
+      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} onConfirm={handleReportCard} isSubmitting={submittingReport} />
 
       {/* Big Card or Skeleton */}
       {isTransitioning ? (
@@ -478,7 +647,6 @@ const ReviewMode = ({
               {/* Front of card */}
               <div className="absolute inset-0 w-full h-full rounded-2xl bg-neutral-100 shadow-xl overflow-hidden" style={{ backfaceVisibility: "hidden" }}>
                 {card.frontImage ? (
-                  // When frontImage exists, show image with text below
                   <div className="flex flex-col h-full">
                     <div className="flex-1 relative">
                       <Image src={card.frontImage} alt="Front of card" fill={true} className="object-contain" />
@@ -490,7 +658,6 @@ const ReviewMode = ({
                     )}
                   </div>
                 ) : (
-                  // When no frontImage, center the text
                   <div className="absolute inset-0 p-6 sm:p-8 md:p-12 overflow-auto flex items-center justify-center">
                     {card.frontText && <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-black text-center leading-tight">{card.frontText}</h3>}
                   </div>
@@ -506,7 +673,6 @@ const ReviewMode = ({
                 }}
               >
                 {card.backImage ? (
-                  // When backImage exists, show image with text below
                   <div className="flex flex-col h-full">
                     <div className="flex-1 relative">
                       <Image src={card.backImage} alt="Back of card" fill={true} className="object-contain" />
@@ -518,7 +684,6 @@ const ReviewMode = ({
                     )}
                   </div>
                 ) : (
-                  // When no backImage, center the text
                   <div className="absolute inset-0 p-6 sm:p-8 md:p-12 overflow-auto flex items-center justify-center">
                     {card.backText && <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-white text-center leading-tight">{card.backText}</h3>}
                   </div>
@@ -644,66 +809,165 @@ const BarGraph = ({
   );
 };
 
-const FlashCard = ({ frontText, backText, frontImage, backImage }: FlashCardType) => {
+const FlashCard = ({
+  frontText,
+  backText,
+  frontImage,
+  backImage,
+  id,
+  setNotifMessage,
+  setIsNotifOpen,
+  onCardHidden,
+}: FlashCardType & {
+  setNotifMessage: React.Dispatch<React.SetStateAction<string>>;
+  setIsNotifOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  onCardHidden: () => void;
+}) => {
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
+  const [showReportModal, setShowReportModal] = useState<boolean>(false);
+  const [submittingReport, setSubmittingReport] = useState<boolean>(false);
+  const [userId, setUserId] = useState<string>("");
+  const [userName, setUserName] = useState<string>("");
 
-  const handleClick = () => {
+  useEffect(() => {
+    const getUserData = async () => {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        setUserId(user.id);
+
+        const { data: profile } = await supabase.from("user_profiles").select("name").eq("id", user.id).single();
+
+        setUserName(profile?.name || user.email || "Anonymous");
+      }
+    };
+
+    getUserData();
+  }, []);
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Don't flip if clicking the report button
+    if ((e.target as HTMLElement).closest("button")) {
+      return;
+    }
     setIsFlipped(!isFlipped);
   };
 
-  return (
-    <div className="relative cursor-pointer aspect-square w-full max-w-sm mx-auto" onClick={handleClick}>
-      <motion.div className="relative w-full h-full" style={{ transformStyle: "preserve-3d" }} animate={{ rotateY: isFlipped ? 180 : 0 }} transition={{ duration: 0.6, ease: "easeInOut" }}>
-        {/* Front of card */}
-        <div className="absolute inset-0 w-full h-full rounded-2xl bg-neutral-100 shadow-md overflow-hidden" style={{ backfaceVisibility: "hidden" }}>
-          {frontImage ? (
-            // When frontImage exists, show image with text below
-            <div className="flex flex-col h-full">
-              <div className="flex-1 relative">
-                <Image src={frontImage} alt="Front of card" fill={true} className="object-contain" />
-              </div>
-              {frontText && (
-                <div className="p-3 sm:p-4 bg-neutral-100 border-t border-neutral-200">
-                  <h3 className="text-sm sm:text-base md:text-lg font-bold text-black text-center leading-tight">{frontText}</h3>
-                </div>
-              )}
-            </div>
-          ) : (
-            // When no frontImage, center the text
-            <div className="absolute inset-0 p-4 sm:p-6 overflow-auto flex items-center justify-center">
-              {frontText && <h3 className="text-base sm:text-lg md:text-xl font-bold text-black text-center leading-tight">{frontText}</h3>}
-            </div>
-          )}
-        </div>
+  const handleReportCard = async () => {
+    if (!userId || !id) return;
 
-        {/* Back of card */}
-        <div
-          className="absolute inset-0 w-full h-full rounded-2xl bg-neutral-700 shadow-md overflow-hidden"
-          style={{
-            backfaceVisibility: "hidden",
-            transform: "rotateY(180deg)",
+    setSubmittingReport(true);
+
+    try {
+      const response = await fetch(`/api/flash-cards/${id}/report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reporterUserId: userId,
+          reporterName: userName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        console.error("Error submitting report:", data.error);
+        setNotifMessage(data.error || "Failed to report card");
+        setIsNotifOpen(true);
+        setSubmittingReport(false);
+        setShowReportModal(false);
+        return;
+      }
+
+      setNotifMessage("Card reported successfully and hidden from all users");
+      setIsNotifOpen(true);
+      setShowReportModal(false);
+      setSubmittingReport(false);
+
+      // Remove the card from view by refreshing the list
+      setTimeout(() => {
+        onCardHidden();
+      }, 1000);
+    } catch (error) {
+      console.error("Error in handleReportCard:", error);
+      setNotifMessage("Failed to report card");
+      setIsNotifOpen(true);
+      setSubmittingReport(false);
+      setShowReportModal(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="relative cursor-pointer aspect-square w-full max-w-sm mx-auto" onClick={handleClick}>
+        {/* Report button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowReportModal(true);
           }}
+          className="absolute top-2 right-2 z-10 bg-zinc-900/80 hover:bg-yellow-600 text-yellow-500 hover:text-white p-2 rounded-lg transition-all duration-200 backdrop-blur-sm curs"
+          title="Report misinformation"
         >
-          {backImage ? (
-            // When backImage exists, show image with text below
-            <div className="flex flex-col h-full">
-              <div className="flex-1 relative">
-                <Image src={backImage} alt="Back of card" fill={true} className="object-contain" />
-              </div>
-              {backText && (
-                <div className="p-3 sm:p-4 bg-neutral-700 border-t border-neutral-600">
-                  <h3 className="text-sm sm:text-base md:text-lg font-bold text-white text-center leading-tight">{backText}</h3>
+          <IoWarningSharp className="h-6 w-6 text-yellow-500 cursor-help" />
+        </button>
+
+        <motion.div className="relative w-full h-full" style={{ transformStyle: "preserve-3d" }} animate={{ rotateY: isFlipped ? 180 : 0 }} transition={{ duration: 0.6, ease: "easeInOut" }}>
+          {/* Front of card */}
+          <div className="absolute inset-0 w-full h-full rounded-2xl bg-neutral-100 shadow-md overflow-hidden" style={{ backfaceVisibility: "hidden" }}>
+            {frontImage ? (
+              <div className="flex flex-col h-full">
+                <div className="flex-1 relative">
+                  <Image src={frontImage} alt="Front of card" fill={true} className="object-contain" />
                 </div>
-              )}
-            </div>
-          ) : (
-            // When no backImage, center the text
-            <div className="absolute inset-0 p-4 sm:p-6 overflow-auto flex items-center justify-center">
-              {backText && <h3 className="text-base sm:text-lg md:text-xl font-bold text-white text-center leading-tight">{backText}</h3>}
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </div>
+                {frontText && (
+                  <div className="p-3 sm:p-4 bg-neutral-100 border-t border-neutral-200">
+                    <h3 className="text-sm sm:text-base md:text-lg font-bold text-black text-center leading-tight">{frontText}</h3>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="absolute inset-0 p-4 sm:p-6 overflow-auto flex items-center justify-center">
+                {frontText && <h3 className="text-base sm:text-lg md:text-xl font-bold text-black text-center leading-tight">{frontText}</h3>}
+              </div>
+            )}
+          </div>
+
+          {/* Back of card */}
+          <div
+            className="absolute inset-0 w-full h-full rounded-2xl bg-neutral-700 shadow-md overflow-hidden"
+            style={{
+              backfaceVisibility: "hidden",
+              transform: "rotateY(180deg)",
+            }}
+          >
+            {backImage ? (
+              <div className="flex flex-col h-full">
+                <div className="flex-1 relative">
+                  <Image src={backImage} alt="Back of card" fill={true} className="object-contain" />
+                </div>
+                {backText && (
+                  <div className="p-3 sm:p-4 bg-neutral-700 border-t border-neutral-600">
+                    <h3 className="text-sm sm:text-base md:text-lg font-bold text-white text-center leading-tight">{backText}</h3>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="absolute inset-0 p-4 sm:p-6 overflow-auto flex items-center justify-center">
+                {backText && <h3 className="text-base sm:text-lg md:text-xl font-bold text-white text-center leading-tight">{backText}</h3>}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Report Modal */}
+      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} onConfirm={handleReportCard} isSubmitting={submittingReport} />
+    </>
   );
 };

@@ -110,6 +110,7 @@ export interface OptionType {
 }
 
 export interface QuestionType {
+  id: string;
   question: string;
   options: OptionType[];
 }

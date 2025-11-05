@@ -44,7 +44,7 @@ const BasicFAQ = () => {
 
         <Question title="Thank you to all these wonderful people!">
           <p>
-            Huge shoutout to Nicole Lees for providing me with flash cards!
+            Huge shoutout to Andrew Ngo, Brenda Beltran, Nicole Lees, and Isabella Qamar for providing me with their notes!
             <br />
             <br />
             Also thank you to my beta testers: Andrew Ngo, Axel Garcia, Brenda Beltran, Chris Cao, Lucy Velasco, Nicole Lees, Priscilla Ponce, Sebastian Andrade, and Sergio Bedros

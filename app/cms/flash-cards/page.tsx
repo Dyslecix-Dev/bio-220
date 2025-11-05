@@ -4,8 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { FiEdit2, FiX, FiSearch } from "react-icons/fi";
+import { IoWarningSharp } from "react-icons/io5";
 
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 
 import Navbar from "@/app/_components/Navbar";
 import ShuffleLoader from "@/app/_components/ShuffleLoader";
@@ -20,6 +21,7 @@ export default function CMSFlashCards() {
   const [error, setError] = useState<string | null>(null);
   const [flashCards, setFlashCards] = useState<FlashCardType[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>("");
 
   // Notification state
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -50,14 +52,24 @@ export default function CMSFlashCards() {
 
       setCurrentUserId(user.id);
 
-      const { data, error } = await supabase.from("flash_cards").select(`
+      // Get user profile for name
+      const { data: profile } = await supabase.from("user_profiles").select("name").eq("id", user.id).single();
+
+      setUserName(profile?.name || user.email || "Anonymous");
+
+      const { data, error } = await supabase
+        .from("flash_cards")
+        .select(
+          `
           *,
           user_flash_card_progress!left (
             grade,
             attempts,
             user_id
           )
-        `);
+        `
+        )
+        .eq("is_hidden", false);
 
       if (error) {
         setError(error.message);
@@ -154,6 +166,42 @@ export default function CMSFlashCards() {
     }
   };
 
+  const handleReportCard = async (cardId: string) => {
+    if (!currentUserId) {
+      showNotification("You must be logged in to report cards");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/flash-cards/${cardId}/report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reporterUserId: currentUserId,
+          reporterName: userName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        console.error("Error submitting report:", data.error);
+        showNotification(data.error || "Failed to report card");
+        return;
+      }
+
+      showNotification("Card reported successfully and hidden from all users");
+
+      // Remove the card from view
+      setFlashCards((prevCards) => prevCards.filter((card) => card.id !== cardId));
+    } catch (error) {
+      console.error("Error in handleReportCard:", error);
+      showNotification("Failed to report card");
+    }
+  };
+
   // Group cards by topic
   const groupedCards = flashCards.reduce((acc, card) => {
     const topic = card.topic || "Uncategorized";
@@ -235,7 +283,7 @@ export default function CMSFlashCards() {
         </div>
 
         {sortedTopics.map((topic) => (
-          <TopicSection key={topic} topic={topic} cards={groupedCards[topic]} onDeleteCard={handleDeleteCard} currentUserId={currentUserId} />
+          <TopicSection key={topic} topic={topic} cards={groupedCards[topic]} onDeleteCard={handleDeleteCard} onReportCard={handleReportCard} currentUserId={currentUserId} />
         ))}
       </section>
 
@@ -245,7 +293,19 @@ export default function CMSFlashCards() {
   );
 }
 
-const TopicSection = ({ topic, cards, onDeleteCard, currentUserId }: { topic: string; cards: FlashCardType[]; onDeleteCard: (cardId: string) => void; currentUserId: string | null }) => {
+const TopicSection = ({
+  topic,
+  cards,
+  onDeleteCard,
+  onReportCard,
+  currentUserId,
+}: {
+  topic: string;
+  cards: FlashCardType[];
+  onDeleteCard: (cardId: string) => void;
+  onReportCard: (cardId: string) => void;
+  currentUserId: string | null;
+}) => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredCards = cards.filter((card) => {
@@ -293,16 +353,81 @@ const TopicSection = ({ topic, cards, onDeleteCard, currentUserId }: { topic: st
 
       <div className="flex gap-4 overflow-x-auto pb-4">
         {filteredCards.map((card) => (
-          <FlipCard key={card.id} card={card} onDeleteCard={onDeleteCard} currentUserId={currentUserId} />
+          <FlipCard key={card.id} card={card} onDeleteCard={onDeleteCard} onReportCard={onReportCard} currentUserId={currentUserId} />
         ))}
       </div>
     </div>
   );
 };
 
-const FlipCard = ({ card, onDeleteCard, currentUserId }: { card: FlashCardType; onDeleteCard: (cardId: string) => void; currentUserId: string | null }) => {
+// Report Modal Component
+const ReportModal = ({ isOpen, onClose, onConfirm, isSubmitting }: { isOpen: boolean; onClose: () => void; onConfirm: () => void; isSubmitting: boolean }) => {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
+
+          {/* Modal */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md z-50"
+          >
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl mx-4">
+              {/* Icon */}
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border-1 border-yellow-500">
+                <IoWarningSharp className="h-6 w-6 text-yellow-500" />
+              </div>
+
+              {/* Title */}
+              <h3 className="text-xl font-bold text-zinc-100 text-center mb-2">Report Misinformation?</h3>
+
+              {/* Description */}
+              <p className="text-zinc-400 text-center mb-6">Are you sure you want to report this card for misinformation? This card will be hidden from all users.</p>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer duration-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={onConfirm}
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer duration-300"
+                >
+                  {isSubmitting ? "Reporting..." : "Report Card"}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
+const FlipCard = ({
+  card,
+  onDeleteCard,
+  onReportCard,
+  currentUserId,
+}: {
+  card: FlashCardType;
+  onDeleteCard: (cardId: string) => void;
+  onReportCard: (cardId: string) => void;
+  currentUserId: string | null;
+}) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [submittingReport, setSubmittingReport] = useState(false);
 
   const isOwner = currentUserId === card.user_id;
 
@@ -326,6 +451,17 @@ const FlipCard = ({ card, onDeleteCard, currentUserId }: { card: FlashCardType; 
     setShowDeleteConfirm(false);
   };
 
+  const handleReportClick = () => {
+    setShowReportModal(true);
+  };
+
+  const confirmReport = async () => {
+    setSubmittingReport(true);
+    await onReportCard(card.id);
+    setSubmittingReport(false);
+    setShowReportModal(false);
+  };
+
   return (
     <>
       <div className="flex-shrink-0 w-80 h-96 cursor-pointer relative" onClick={handleCardClick}>
@@ -334,16 +470,23 @@ const FlipCard = ({ card, onDeleteCard, currentUserId }: { card: FlashCardType; 
             className="absolute inset-0 w-full h-full rounded-lg border border-zinc-700 bg-zinc-900 hover:border-indigo-500 transition-colors overflow-hidden"
             style={{ backfaceVisibility: "hidden" }}
           >
-            {isOwner && (
-              <div className="absolute top-2 left-2 right-2 flex justify-between z-10" style={{ pointerEvents: isFlipped ? "none" : "auto" }}>
-                <button onClick={handleDeleteClick} className="p-2 bg-red-600 hover:bg-red-700 rounded-full transition-colors cursor-pointer" title="Delete card">
-                  <FiX className="text-white" />
+            <div className="absolute top-2 left-2 right-2 flex justify-between z-10" style={{ pointerEvents: isFlipped ? "none" : "auto" }}>
+              <div className="flex gap-2">
+                {isOwner && (
+                  <button onClick={handleDeleteClick} className="p-2 bg-red-600 hover:bg-red-700 rounded-full transition-colors cursor-pointer" title="Delete card">
+                    <FiX className="text-white" />
+                  </button>
+                )}
+                <button onClick={handleReportClick} className="p-2 bg-yellow-600 hover:bg-yellow-700 rounded-full transition-colors cursor-pointer" title="Report misinformation">
+                  <IoWarningSharp className="text-white" />
                 </button>
+              </div>
+              {isOwner && (
                 <Link href={`/cms/flash-cards/${card.id}`} className="p-2 bg-indigo-600 hover:bg-indigo-700 rounded-full transition-colors" title="Edit card">
                   <FiEdit2 className="text-white" />
                 </Link>
-              </div>
-            )}
+              )}
+            </div>
 
             {card.frontImage ? (
               <div className="flex flex-col h-full pt-12">
@@ -396,6 +539,7 @@ const FlipCard = ({ card, onDeleteCard, currentUserId }: { card: FlashCardType; 
         </motion.div>
       </div>
 
+      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={cancelDelete}>
           <div className="bg-zinc-800 p-6 rounded-lg border border-zinc-700 max-w-sm" onClick={(e) => e.stopPropagation()}>
@@ -412,6 +556,9 @@ const FlipCard = ({ card, onDeleteCard, currentUserId }: { card: FlashCardType; 
           </div>
         </div>
       )}
+
+      {/* Report Modal */}
+      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} onConfirm={confirmReport} isSubmitting={submittingReport} />
     </>
   );
 };
