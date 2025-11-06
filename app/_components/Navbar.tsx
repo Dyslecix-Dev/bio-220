@@ -118,6 +118,8 @@ const NavbarLoadingSkeleton = () => {
     <div className="flex items-center gap-6">
       <div className="h-5 w-16 animate-pulse rounded bg-neutral-700" />
       <div className="h-5 w-16 animate-pulse rounded bg-neutral-700" />
+      <div className="h-5 w-16 animate-pulse rounded bg-neutral-700" />
+      <div className="h-5 w-16 animate-pulse rounded bg-neutral-700" />
     </div>
   );
 };
@@ -133,7 +135,7 @@ const Links = ({ userAdmin }: { userAdmin: string }) => {
   return (
     <div className="flex items-center gap-6">
       {links.map((link) => (
-        <NavLink key={link.text} href={link.href}>
+        <NavLink key={link.text} href={link.href || "#"} FlyoutContent={link.FlyoutContent}>
           {link.text}
         </NavLink>
       ))}
@@ -148,15 +150,27 @@ const NavLink = ({ children, href, FlyoutContent }: { children: ReactNode; href:
 
   return (
     <div onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)} className="relative h-fit w-fit">
-      <a href={href} className="relative">
-        {children}
-        <span
-          style={{
-            transform: showFlyout ? "scaleX(1)" : "scaleX(0)",
-          }}
-          className="absolute -bottom-2 -left-2 -right-2 h-1 origin-left scale-x-0 rounded-full bg-indigo-300 transition-transform duration-500 ease-out"
-        />
-      </a>
+      {FlyoutContent ? (
+        <span className="relative cursor-pointer">
+          {children}
+          <span
+            style={{
+              transform: showFlyout ? "scaleX(1)" : "scaleX(0)",
+            }}
+            className="absolute -bottom-2 -left-2 -right-2 h-1 origin-left scale-x-0 rounded-full bg-indigo-300 transition-transform duration-500 ease-out"
+          />
+        </span>
+      ) : (
+        <a href={href} className="relative">
+          {children}
+          <span
+            style={{
+              transform: showFlyout ? "scaleX(1)" : "scaleX(0)",
+            }}
+            className="absolute -bottom-2 -left-2 -right-2 h-1 origin-left scale-x-0 rounded-full bg-indigo-300 transition-transform duration-500 ease-out"
+          />
+        </a>
+      )}
       <AnimatePresence>
         {showFlyout && (
           <motion.div
@@ -173,6 +187,59 @@ const NavLink = ({ children, href, FlyoutContent }: { children: ReactNode; href:
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+};
+
+const FlashCardsFlyout = () => {
+  const numberToWord = (num: number) => {
+    const words = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen"];
+    return words[num] || num.toString();
+  };
+
+  return (
+    <div className="w-64 bg-white p-6 shadow-xl">
+      <div className="mb-3 space-y-3">
+        <h3 className="font-semibold">Lecture</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {[5, 6, 7, 8, 9, 10, 11, 12, 13].map((ch) => (
+            <a key={ch} href={`/flash-cards/lecture/${numberToWord(ch)}`} className="rounded bg-neutral-100 px-3 py-2 text-center text-sm transition-colors hover:bg-indigo-100">
+              Ch {ch}
+            </a>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-3">
+        <h3 className="font-semibold">Lab</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {[10, 11, 12, 13, 14].map((wk) => (
+            <a key={wk} href={`/flash-cards/lab/${numberToWord(wk)}`} className="rounded bg-neutral-100 px-3 py-2 text-center text-sm transition-colors hover:bg-indigo-100">
+              Wk {wk}
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ExamsFlyout = () => {
+  return (
+    <div className="w-48 bg-white p-6 shadow-xl">
+      <div className="space-y-2">
+        <a href="/exams/lecture/two" className="block rounded px-4 py-2 text-sm transition-colors hover:bg-indigo-100">
+          Lecture 2
+        </a>
+        <a href="/exams/lecture/three" className="block rounded px-4 py-2 text-sm transition-colors hover:bg-indigo-100">
+          Lecture 3
+        </a>
+        <a href="/exams/lab/four" className="block rounded px-4 py-2 text-sm transition-colors hover:bg-indigo-100">
+          Lab 4
+        </a>
+        <a href="/exams/lab/five" className="block rounded px-4 py-2 text-sm transition-colors hover:bg-indigo-100">
+          Lab 5
+        </a>
+      </div>
     </div>
   );
 };
@@ -203,15 +270,7 @@ const MobileMenuLink = ({ children, href, FoldContent, setMenuOpen }: { children
     <div className="relative text-neutral-950">
       {FoldContent ? (
         <div className="flex w-full cursor-pointer items-center justify-between border-b border-neutral-300 py-6 text-start text-2xl font-semibold" onClick={() => setOpen((pv) => !pv)}>
-          <a
-            onClick={(e) => {
-              e.stopPropagation();
-              setMenuOpen(false);
-            }}
-            href={href}
-          >
-            {children}
-          </a>
+          <span>{children}</span>
           <motion.div
             animate={{ rotate: open ? "180deg" : "0deg" }}
             transition={{
@@ -254,6 +313,57 @@ const MobileMenuLink = ({ children, href, FoldContent, setMenuOpen }: { children
   );
 };
 
+const FlashCardsMobileFold = () => {
+  const numberToWord = (num: number) => {
+    const words = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen"];
+    return words[num] || num.toString();
+  };
+
+  return (
+    <div className="ml-4 space-y-4">
+      <div>
+        <h3 className="mb-2 text-lg font-semibold">Lecture</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {[5, 6, 7, 8, 9, 10, 11, 12, 13].map((ch) => (
+            <a key={ch} href={`/flash-cards/lecture/${numberToWord(ch)}`} className="rounded bg-white px-3 py-2 text-center text-sm transition-colors hover:bg-indigo-100">
+              Ch {ch}
+            </a>
+          ))}
+        </div>
+      </div>
+      <div>
+        <h3 className="mb-2 text-lg font-semibold">Lab</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {[10, 11, 12, 13, 14].map((wk) => (
+            <a key={wk} href={`/flash-cards/lab/${numberToWord(wk)}`} className="rounded bg-white px-3 py-2 text-center text-sm transition-colors hover:bg-indigo-100">
+              Wk {wk}
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ExamsMobileFold = () => {
+  return (
+    <div className="ml-4 space-y-2">
+      <a href="/exams/lecture/two" className="block rounded bg-white px-4 py-2 text-sm transition-colors hover:bg-indigo-100">
+        Lecture 2
+      </a>
+      <a href="/exams/lecture/three" className="block rounded bg-white px-4 py-2 text-sm transition-colors hover:bg-indigo-100">
+        Lecture 3
+      </a>
+      <a href="/exams/lab/four" className="block rounded bg-white px-4 py-2 text-sm transition-colors hover:bg-indigo-100">
+        Lab 4
+      </a>
+      <a href="/exams/lab/five" className="block rounded bg-white px-4 py-2 text-sm transition-colors hover:bg-indigo-100">
+        Lab 5
+      </a>
+    </div>
+  );
+};
+
 const MobileMenu = ({ onClick: signOut, userAdmin, isLoading }: { onClick: () => void; userAdmin: string; isLoading: boolean }) => {
   const [open, setOpen] = useState(false);
 
@@ -292,7 +402,7 @@ const MobileMenu = ({ onClick: signOut, userAdmin, isLoading }: { onClick: () =>
                 </div>
               ) : (
                 links.map((link) => (
-                  <MobileMenuLink key={link.text} href={link.href} setMenuOpen={setOpen}>
+                  <MobileMenuLink key={link.text} href={link.href || "#"} FoldContent={link.FoldContent} setMenuOpen={setOpen}>
                     {link.text}
                   </MobileMenuLink>
                 ))
@@ -313,14 +423,16 @@ const LINKS = [
     text: "Admin",
     href: "/cms",
   },
-  // {
-  //   text: "Contact",
-  //   href: "#",
-  // },
-  // {
-  //   text: "Leaderboard",
-  //   href: "#",
-  // },
+  {
+    text: "Flash Cards",
+    FlyoutContent: FlashCardsFlyout,
+    FoldContent: FlashCardsMobileFold,
+  },
+  {
+    text: "Exams",
+    FlyoutContent: ExamsFlyout,
+    FoldContent: ExamsMobileFold,
+  },
   {
     text: "FAQ",
     href: "/faq",
@@ -329,9 +441,5 @@ const LINKS = [
     text: "Updates",
     href: "/updates",
   },
-  // {
-  //   text: "Profile",
-  //   href: "#",
-  // },
 ];
 

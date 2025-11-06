@@ -26,6 +26,27 @@ const BasicFAQ = () => {
     <div className="relative z-20 mx-auto flex h-full max-w-6xl flex-col items-center justify-center px-4 py-24 md:px-8 md:py-36">
       <div className="p-5 mx-auto max-w-3xl bg-slate-800 rounded-xl">
         <h3 className="mb-4 text-center text-3xl font-semibold text-white">Website updates</h3>
+        <Question title="November 5th, 2025" defaultOpen>
+          <h4>New Features</h4>
+          <ul>
+            <li>Added flash cards and exams to navbar for better navigation.</li>
+          </ul>
+
+          <h4>Minor Changes</h4>
+          <ul>
+            <li>Removed Kanban option from mobile devices (currently not accessible on mobile).</li>
+            <li>Made flash cards while reviewing slightly smaller.</li>
+            <li>Extended the loading animation between flash cards.</li>
+            <li>Fixed &quot;Cancel&quot; and &quot;Report&quot; buttons overlapping on mobile.</li>
+            <li>Added loading icon while grades are being reset for flash cards.</li>
+          </ul>
+
+          <h4>Bug Fixes</h4>
+          <ul>
+            <li>Fixed how resetting grades for flash cards, reset all flash cards everywhere. Now it only resets the flash cards in the current chapter or week.</li>
+          </ul>
+        </Question>
+
         <Question title="November 4th, 2025" defaultOpen>
           <p>Added the &quot;Updates&quot; page. Also added the ability for users to report flash cards and exam questions with misinformation.</p>
         </Question>

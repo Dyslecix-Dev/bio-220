@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { motion } from "motion/react";
 
 import GlowingDotsBackground from "@/app/_components/_backgrounds/GlowingDotsBackground";
+import Navbar from "@/app/_components/Navbar";
 
 type ListOrderItem = "front" | "middle" | "back";
 
@@ -21,9 +22,10 @@ export default function ExamIntro({ examNumber, examLink, examType = "lecture" }
 
   return (
     <main className="min-h-screen w-full flex items-center justify-center bg-zinc-950 text-zinc-100 relative px-4 py-8 md:py-0">
+      <Navbar />
       <GlowingDotsBackground />
 
-      <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 md:gap-16 md:grid-cols-2 relative z-10 w-full">
+      <div className="mt-20 mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 md:gap-16 md:grid-cols-2 relative z-10 w-full">
         <div className="text-center md:text-left">
           <h3 className="text-4xl sm:text-5xl font-black leading-[1.25] md:text-7xl">
             BIO 220

@@ -332,7 +332,15 @@ const CardGrid = ({
       <BarGraph categorizedCards={categorizedCards} selectedCategory={selectedCategory} onCategorySelect={setSelectedCategory} />
 
       {/* Review Interface */}
-      <ReviewInterface onStartReview={startReview} selectedCategory={selectedCategory} fetchFlashCards={fetchFlashCards} />
+      <ReviewInterface
+        onStartReview={startReview}
+        selectedCategory={selectedCategory}
+        fetchFlashCards={fetchFlashCards}
+        tableKey={tableKey}
+        tableValue={tableValue}
+        loading={loading}
+        setLoading={setLoading}
+      />
 
       {/* Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8">
@@ -344,7 +352,23 @@ const CardGrid = ({
   );
 };
 
-const ReviewInterface = ({ onStartReview, selectedCategory, fetchFlashCards }: { onStartReview: (numCards: number) => void; selectedCategory: string | null; fetchFlashCards: () => void }) => {
+const ReviewInterface = ({
+  onStartReview,
+  selectedCategory,
+  fetchFlashCards,
+  tableKey,
+  tableValue,
+  loading,
+  setLoading,
+}: {
+  onStartReview: (numCards: number) => void;
+  selectedCategory: string | null;
+  fetchFlashCards: () => void;
+  tableKey: string;
+  tableValue: string;
+  loading: boolean;
+  setLoading: (loading: boolean) => void;
+}) => {
   const [numCards, setNumCards] = useState<number>(10);
 
   const handleReview = () => {
@@ -354,6 +378,8 @@ const ReviewInterface = ({ onStartReview, selectedCategory, fetchFlashCards }: {
   };
 
   const handleResetCardProgress = async () => {
+    setLoading(true);
+
     try {
       const supabase = await createClient();
 
@@ -366,7 +392,22 @@ const ReviewInterface = ({ onStartReview, selectedCategory, fetchFlashCards }: {
         return;
       }
 
-      const { error } = await supabase.from("user_flash_card_progress").update({ grade: 0, attempts: 0 }).eq("user_id", user.id);
+      // Get all card IDs for the current table
+      const { data: cards, error: cardsError } = await supabase.from("flash_cards").select("id").eq(tableKey, tableValue).eq("is_hidden", false);
+
+      if (cardsError) {
+        console.error("Error fetching cards:", cardsError);
+        return;
+      }
+
+      if (!cards || cards.length === 0) {
+        return;
+      }
+
+      const cardIds = cards.map((card) => card.id);
+
+      // Reset progress only for these specific cards
+      const { error } = await supabase.from("user_flash_card_progress").update({ grade: 0, attempts: 0 }).eq("user_id", user.id).in("card_id", cardIds);
 
       if (error) {
         console.error("Error resetting card progress:", error);
@@ -375,6 +416,8 @@ const ReviewInterface = ({ onStartReview, selectedCategory, fetchFlashCards }: {
       fetchFlashCards();
     } catch (err) {
       console.error("Error resetting card progress:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -416,7 +459,7 @@ const ReviewInterface = ({ onStartReview, selectedCategory, fetchFlashCards }: {
 
 const FlashCardSkeleton = () => {
   return (
-    <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl aspect-square mb-6 sm:mb-8">
+    <div className="w-full max-w-xs sm:max-w-sm md:max-w-md aspect-square">
       <div className="relative w-full h-full rounded-2xl bg-neutral-800 shadow-xl overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center">
           {/* Animated pulse effect */}
@@ -542,7 +585,9 @@ const ReviewMode = ({
     await new Promise((resolve) => setTimeout(resolve, 300));
     onDifficultySelect(difficulty);
     await new Promise((resolve) => setTimeout(resolve, 100));
-    setIsTransitioning(false);
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, 1000);
   };
 
   const handleReportCard = async () => {
@@ -623,7 +668,7 @@ const ReviewMode = ({
       {/* Report button */}
       <button
         onClick={() => setShowReportModal(true)}
-        className="absolute top-4 sm:top-8 left-24 sm:left-36 bg-transparent hover:bg-yellow-600 text-yellow-600 hover:text-slate-100 font-medium py-2 px-4 sm:px-6 border-1 border-yellow-600 rounded-lg transition-all duration-300 active:scale-95 cursor-pointer z-10"
+        className="absolute top-4 sm:top-8 left-24 sm:left-36 bg-transparent hover:bg-yellow-600 text-yellow-600 hover:text-slate-100 font-medium py-2 px-4 sm:px-6 border-1 border-yellow-600 rounded-lg transition-all duration-300 active:scale-95 cursor-pointer z-10 ml-4 md:ml-0"
         title="Report misinformation"
       >
         <IoWarningSharp className="h-6 w-6 text-yellow-500" />
@@ -637,12 +682,12 @@ const ReviewMode = ({
       {/* Report Modal */}
       <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} onConfirm={handleReportCard} isSubmitting={submittingReport} />
 
-      {/* Big Card or Skeleton */}
-      {isTransitioning ? (
-        <FlashCardSkeleton />
-      ) : (
-        <>
-          <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl aspect-square cursor-pointer mb-6 sm:mb-8" onClick={() => setIsFlipped(!isFlipped)}>
+      {/* Big Card or Skeleton - with reserved space for buttons */}
+      <div className="flex flex-col items-center w-full max-w-xs sm:max-w-sm md:max-w-md">
+        {isTransitioning ? (
+          <FlashCardSkeleton />
+        ) : (
+          <div className="w-full aspect-square cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
             <motion.div className="relative w-full h-full" style={{ transformStyle: "preserve-3d" }} animate={{ rotateY: isFlipped ? 180 : 0 }} transition={{ duration: 0.6, ease: "easeInOut" }}>
               {/* Front of card */}
               <div className="absolute inset-0 w-full h-full rounded-2xl bg-neutral-100 shadow-xl overflow-hidden" style={{ backfaceVisibility: "hidden" }}>
@@ -653,13 +698,13 @@ const ReviewMode = ({
                     </div>
                     {card.frontText && (
                       <div className="p-4 sm:p-6 bg-neutral-100 border-t border-neutral-200">
-                        <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-black text-center leading-tight">{card.frontText}</h3>
+                        <h3 className="text-base sm:text-lg md:text-xl font-bold text-black text-center leading-tight">{card.frontText}</h3>
                       </div>
                     )}
                   </div>
                 ) : (
                   <div className="absolute inset-0 p-6 sm:p-8 md:p-12 overflow-auto flex items-center justify-center">
-                    {card.frontText && <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-black text-center leading-tight">{card.frontText}</h3>}
+                    {card.frontText && <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-black text-center leading-tight">{card.frontText}</h3>}
                   </div>
                 )}
               </div>
@@ -679,47 +724,42 @@ const ReviewMode = ({
                     </div>
                     {card.backText && (
                       <div className="p-4 sm:p-6 bg-neutral-700 border-t border-neutral-600">
-                        <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white text-center leading-tight">{card.backText}</h3>
+                        <h3 className="text-base sm:text-lg md:text-xl font-bold text-white text-center leading-tight">{card.backText}</h3>
                       </div>
                     )}
                   </div>
                 ) : (
                   <div className="absolute inset-0 p-6 sm:p-8 md:p-12 overflow-auto flex items-center justify-center">
-                    {card.backText && <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-white text-center leading-tight">{card.backText}</h3>}
+                    {card.backText && <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white text-center leading-tight">{card.backText}</h3>}
                   </div>
                 )}
               </div>
             </motion.div>
           </div>
+        )}
 
-          {/* Difficulty buttons */}
-          {isFlipped && (
-            <motion.div
-              className="w-full max-w-sm sm:max-w-md md:max-w-lg grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-4 px-4 sm:px-0"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
+        {/* Difficulty buttons - always visible to prevent layout shift */}
+        <div className="w-full mt-6 min-h-[60px] sm:min-h-[64px]">
+          {isFlipped && !isTransitioning ? (
+            <motion.div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 w-full" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
               {difficultyButtons.map((button) => (
                 <button
                   key={button.value}
                   onClick={() => handleDifficultySelect(button.value)}
                   className={`
-                px-3 sm:px-6 md:px-8 py-3 sm:py-4 ${button.color} text-white font-medium rounded-lg 
-                transition-colors duration-200 text-sm sm:text-base md:text-lg cursor-pointer
-                flex-1 sm:flex-none
-              `}
+                    px-3 sm:px-4 py-3 ${button.color} text-white font-medium rounded-lg 
+                    transition-colors duration-200 text-sm sm:text-base cursor-pointer
+                  `}
                 >
                   {button.label}
                 </button>
               ))}
             </motion.div>
+          ) : (
+            <div className="text-zinc-400 text-center text-sm sm:text-base px-4">{isTransitioning ? "" : "Click the card to reveal the answer"}</div>
           )}
-
-          {/* Instruction text */}
-          {!isFlipped && <div className="text-zinc-400 text-center text-sm sm:text-base md:text-lg px-4">Click the card to reveal the answer</div>}
-        </>
-      )}
+        </div>
+      </div>
     </div>
   );
 };
@@ -911,10 +951,10 @@ const FlashCard = ({
             e.stopPropagation();
             setShowReportModal(true);
           }}
-          className="absolute top-2 right-2 z-10 bg-zinc-900/80 hover:bg-yellow-600 text-yellow-500 hover:text-white p-2 rounded-lg transition-all duration-200 backdrop-blur-sm curs"
+          className="absolute top-2 right-2 z-10 bg-zinc-900/80 hover:bg-yellow-600 text-yellow-500 hover:text-white p-2 rounded-lg transition-all duration-200 backdrop-blur-sm cursor-pointer"
           title="Report misinformation"
         >
-          <IoWarningSharp className="h-6 w-6 text-yellow-500 cursor-help" />
+          <IoWarningSharp className="h-6 w-6" />
         </button>
 
         <motion.div className="relative w-full h-full" style={{ transformStyle: "preserve-3d" }} animate={{ rotateY: isFlipped ? 180 : 0 }} transition={{ duration: 0.6, ease: "easeInOut" }}>
