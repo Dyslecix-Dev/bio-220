@@ -206,13 +206,17 @@ export default function EditExamQuestion() {
         return;
       }
 
-      // Success - redirect to CMS page
-      router.push("/cms/exam-questions");
+      // Success - go back to previous page
+      router.back();
     } catch (err) {
       console.error("Error:", err);
       setError("An unexpected error occurred while updating the exam question");
       setLoading(false);
     }
+  };
+
+  const handleCancel = () => {
+    router.back();
   };
 
   if (loading) {
@@ -372,7 +376,7 @@ export default function EditExamQuestion() {
             <button
               type="button"
               disabled={loading}
-              onClick={() => router.push("/cms/exam-questions")}
+              onClick={handleCancel}
               className="px-6 py-3 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 rounded-lg font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
             >
               Cancel

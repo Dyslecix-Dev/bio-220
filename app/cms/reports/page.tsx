@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { FiAlertTriangle, FiCreditCard, FiFileText, FiSearch, FiChevronDown, FiChevronUp, FiTrash2, FiEdit2, FiRefreshCw } from "react-icons/fi";
+import { FiAlertTriangle, FiCreditCard, FiFileText, FiSearch, FiChevronDown, FiChevronUp, FiTrash2, FiEdit2, FiRefreshCw, FiClock } from "react-icons/fi";
 import { GoPencil } from "react-icons/go";
 import { IoBugOutline, IoWarningSharp } from "react-icons/io5";
 import { PiCards } from "react-icons/pi";
@@ -22,13 +22,8 @@ type ReportType = {
   report_message: string | null;
   reported_item_id: string | null;
   created_at: string;
+  item_updated_at?: string | null;
 };
-
-// BUG: Missing API route to restore flash cards and exam questions
-// TODO: Missing delete items for flash cards and exam questions
-// TODO: When card is restored, delete report.
-// TODO: After card is edited, return to this page.
-// TODO: After card is deleted, delete report.
 
 export default function ReportsPage() {
   const [loading, setLoading] = useState<boolean>(true);
@@ -67,7 +62,20 @@ export default function ReportsPage() {
         setError(error.message);
         console.error("Error fetching reports:", error);
       } else if (data) {
-        setReports(data);
+        // Fetch updated_at timestamps for flash cards and exam questions
+        const reportsWithTimestamps = await Promise.all(
+          data.map(async (report) => {
+            if (report.reported_item_id && report.report_type === "flash_card") {
+              const { data: card } = await supabase.from("flash_cards").select("updated_at").eq("id", report.reported_item_id).single();
+              return { ...report, item_updated_at: card?.updated_at };
+            } else if (report.reported_item_id && report.report_type === "exam_question") {
+              const { data: question } = await supabase.from("exam_questions").select("updated_at").eq("id", report.reported_item_id).single();
+              return { ...report, item_updated_at: question?.updated_at };
+            }
+            return report;
+          })
+        );
+        setReports(reportsWithTimestamps);
       }
     } catch (err) {
       setError("Failed to fetch reports");
@@ -84,8 +92,6 @@ export default function ReportsPage() {
       });
 
       const data = await response.json();
-
-      console.log(response);
 
       if (!response.ok || !data.success) {
         showNotification(data.error || "Failed to delete bug report");
@@ -121,6 +127,27 @@ export default function ReportsPage() {
     }
   };
 
+  const handleDeleteFlashCard = async (reportId: string) => {
+    try {
+      const response = await fetch(`/api/reports/flash-card/${reportId}/delete`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        showNotification(data.error || "Failed to delete flash card");
+        return;
+      }
+
+      showNotification("Flash card and report deleted successfully");
+      setReports((prev) => prev.filter((r) => r.id !== reportId));
+    } catch (error) {
+      console.error("Error deleting flash card:", error);
+      showNotification("Failed to delete flash card");
+    }
+  };
+
   const handleRestoreExamQuestion = async (reportId: string) => {
     try {
       const response = await fetch(`/api/reports/exam-question/${reportId}/restore`, {
@@ -139,6 +166,27 @@ export default function ReportsPage() {
     } catch (error) {
       console.error("Error restoring exam question:", error);
       showNotification("Failed to restore exam question");
+    }
+  };
+
+  const handleDeleteExamQuestion = async (reportId: string) => {
+    try {
+      const response = await fetch(`/api/reports/exam-question/${reportId}/delete`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        showNotification(data.error || "Failed to delete exam question");
+        return;
+      }
+
+      showNotification("Exam question and report deleted successfully");
+      setReports((prev) => prev.filter((r) => r.id !== reportId));
+    } catch (error) {
+      console.error("Error deleting exam question:", error);
+      showNotification("Failed to delete exam question");
     }
   };
 
@@ -229,7 +277,9 @@ export default function ReportsPage() {
                   color="yellow"
                   onDeleteBugReport={handleDeleteBugReport}
                   onRestoreFlashCard={handleRestoreFlashCard}
+                  onDeleteFlashCard={handleDeleteFlashCard}
                   onRestoreExamQuestion={handleRestoreExamQuestion}
+                  onDeleteExamQuestion={handleDeleteExamQuestion}
                 />
               )}
               {groupedReports.flash_card && (
@@ -240,7 +290,9 @@ export default function ReportsPage() {
                   color="blue"
                   onDeleteBugReport={handleDeleteBugReport}
                   onRestoreFlashCard={handleRestoreFlashCard}
+                  onDeleteFlashCard={handleDeleteFlashCard}
                   onRestoreExamQuestion={handleRestoreExamQuestion}
+                  onDeleteExamQuestion={handleDeleteExamQuestion}
                 />
               )}
               {groupedReports.exam_question && (
@@ -251,7 +303,9 @@ export default function ReportsPage() {
                   color="red"
                   onDeleteBugReport={handleDeleteBugReport}
                   onRestoreFlashCard={handleRestoreFlashCard}
+                  onDeleteFlashCard={handleDeleteFlashCard}
                   onRestoreExamQuestion={handleRestoreExamQuestion}
+                  onDeleteExamQuestion={handleDeleteExamQuestion}
                 />
               )}
             </>
@@ -283,7 +337,9 @@ const ReportTypeSection = ({
   color,
   onDeleteBugReport,
   onRestoreFlashCard,
+  onDeleteFlashCard,
   onRestoreExamQuestion,
+  onDeleteExamQuestion,
 }: {
   title: string;
   reports: ReportType[];
@@ -291,7 +347,9 @@ const ReportTypeSection = ({
   color: "yellow" | "blue" | "red";
   onDeleteBugReport: (reportId: string) => void;
   onRestoreFlashCard: (reportId: string) => void;
+  onDeleteFlashCard: (reportId: string) => void;
   onRestoreExamQuestion: (reportId: string) => void;
+  onDeleteExamQuestion: (reportId: string) => void;
 }) => {
   const [isOpen, setIsOpen] = useState<boolean>(true);
 
@@ -338,7 +396,15 @@ const ReportTypeSection = ({
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }} className="overflow-hidden">
             <div className="mt-4 space-y-4">
               {reports.map((report) => (
-                <ReportCard key={report.id} report={report} onDeleteBugReport={onDeleteBugReport} onRestoreFlashCard={onRestoreFlashCard} onRestoreExamQuestion={onRestoreExamQuestion} />
+                <ReportCard
+                  key={report.id}
+                  report={report}
+                  onDeleteBugReport={onDeleteBugReport}
+                  onRestoreFlashCard={onRestoreFlashCard}
+                  onDeleteFlashCard={onDeleteFlashCard}
+                  onRestoreExamQuestion={onRestoreExamQuestion}
+                  onDeleteExamQuestion={onDeleteExamQuestion}
+                />
               ))}
             </div>
           </motion.div>
@@ -352,15 +418,20 @@ const ReportCard = ({
   report,
   onDeleteBugReport,
   onRestoreFlashCard,
+  onDeleteFlashCard,
   onRestoreExamQuestion,
+  onDeleteExamQuestion,
 }: {
   report: ReportType;
   onDeleteBugReport: (reportId: string) => void;
   onRestoreFlashCard: (reportId: string) => void;
+  onDeleteFlashCard: (reportId: string) => void;
   onRestoreExamQuestion: (reportId: string) => void;
+  onDeleteExamQuestion: (reportId: string) => void;
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [showDeleteItemConfirm, setShowDeleteItemConfirm] = useState(false);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -386,6 +457,13 @@ const ReportCard = ({
     }
   };
 
+  const isRecentlyEdited = () => {
+    if (!report.item_updated_at) return false;
+    const updatedAt = new Date(report.item_updated_at);
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    return updatedAt > oneHourAgo;
+  };
+
   const handleDelete = () => {
     if (report.report_type === "bug") {
       onDeleteBugReport(report.id);
@@ -402,9 +480,28 @@ const ReportCard = ({
     setShowRestoreConfirm(false);
   };
 
+  const handleDeleteItem = () => {
+    if (report.report_type === "flash_card") {
+      onDeleteFlashCard(report.id);
+    } else if (report.report_type === "exam_question") {
+      onDeleteExamQuestion(report.id);
+    }
+    setShowDeleteItemConfirm(false);
+  };
+
+  const recentlyEdited = isRecentlyEdited();
+
   return (
     <>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 hover:border-zinc-700 transition-colors">
+      <div className={`bg-zinc-900 border rounded-lg p-6 transition-colors ${recentlyEdited ? "border-emerald-500 shadow-lg shadow-emerald-500/20" : "border-zinc-800 hover:border-zinc-700"}`}>
+        {/* Recently Edited Badge */}
+        {recentlyEdited && (
+          <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-emerald-500/20 border border-emerald-500/50 rounded-lg">
+            <FiClock className="text-emerald-400" />
+            <span className="text-sm font-medium text-emerald-400">Recently edited (within last hour)</span>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex justify-between items-start mb-4">
           <div>
@@ -431,7 +528,7 @@ const ReportCard = ({
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3 mb-4">
+        <div className="flex flex-wrap gap-3 mb-4">
           {report.report_type === "bug" && (
             <button onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer">
               <FiTrash2 />
@@ -449,6 +546,10 @@ const ReportCard = ({
                 <FiEdit2 />
                 Edit Card
               </Link>
+              <button onClick={() => setShowDeleteItemConfirm(true)} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer">
+                <FiTrash2 />
+                Delete Card
+              </button>
             </>
           )}
 
@@ -462,6 +563,10 @@ const ReportCard = ({
                 <FiEdit2 />
                 Edit Question
               </Link>
+              <button onClick={() => setShowDeleteItemConfirm(true)} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors cursor-pointer">
+                <FiTrash2 />
+                Delete Question
+              </button>
             </>
           )}
         </div>
@@ -473,12 +578,12 @@ const ReportCard = ({
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Report Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDeleteConfirm(false)}>
           <div className="bg-zinc-800 p-6 rounded-lg border border-zinc-700 max-w-sm" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-bold mb-4">Delete Report?</h3>
-            <p className="text-zinc-400 mb-6">Are you sure you want to delete this {report.report_type === "bug" ? "bug report" : "report"}? This action cannot be undone.</p>
+            <p className="text-zinc-400 mb-6">Are you sure you want to delete this bug report? This action cannot be undone.</p>
             <div className="flex gap-4">
               <button onClick={handleDelete} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors font-semibold cursor-pointer">
                 Yes, Delete
@@ -504,6 +609,24 @@ const ReportCard = ({
                 Yes, Restore
               </button>
               <button onClick={() => setShowRestoreConfirm(false)} className="flex-1 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors font-semibold cursor-pointer">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Item Confirmation Modal */}
+      {showDeleteItemConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDeleteItemConfirm(false)}>
+          <div className="bg-zinc-800 p-6 rounded-lg border border-zinc-700 max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-bold mb-4">Delete {report.report_type === "flash_card" ? "Flash Card" : "Exam Question"}?</h3>
+            <p className="text-zinc-400 mb-6">This will permanently delete the {report.report_type === "flash_card" ? "flash card" : "exam question"} and this report. This action cannot be undone.</p>
+            <div className="flex gap-4">
+              <button onClick={handleDeleteItem} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors font-semibold cursor-pointer">
+                Yes, Delete
+              </button>
+              <button onClick={() => setShowDeleteItemConfirm(false)} className="flex-1 px-4 py-2 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors font-semibold cursor-pointer">
                 Cancel
               </button>
             </div>

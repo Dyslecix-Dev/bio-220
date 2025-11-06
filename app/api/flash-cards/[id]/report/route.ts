@@ -1,4 +1,3 @@
-// app/api/flash-cards/[id]/report/route.ts
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 

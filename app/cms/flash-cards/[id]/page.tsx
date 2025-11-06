@@ -206,13 +206,17 @@ export default function EditFlashCard() {
         return;
       }
 
-      // Success - redirect to CMS page
-      router.push("/cms/flash-cards");
+      // Success - go back to previous page
+      router.back();
     } catch (err) {
       console.error("Error:", err);
       showNotification(err instanceof Error ? err.message : "Failed to update flash card");
       setLoading(false);
     }
+  };
+
+  const handleCancel = () => {
+    router.back();
   };
 
   if (loading) {
@@ -388,7 +392,7 @@ export default function EditFlashCard() {
             <button
               type="button"
               disabled={loading}
-              onClick={() => router.push("/cms/flash-cards")}
+              onClick={handleCancel}
               className="px-6 py-3 bg-zinc-700 hover:bg-zinc-600 disabled:bg-zinc-800 rounded-lg font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
             >
               Cancel
