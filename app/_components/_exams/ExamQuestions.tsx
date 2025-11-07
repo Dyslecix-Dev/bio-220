@@ -5,10 +5,10 @@ import { useState, useEffect, useRef, useCallback, FC } from "react";
 import { FaArrowRotateRight } from "react-icons/fa6";
 import { FiArrowRight, FiHome, FiClock } from "react-icons/fi";
 import { IoWarningSharp } from "react-icons/io5";
-import { motion, AnimatePresence } from "motion/react";
 
 import Countdown from "@/app/_components/Countdown";
 import GlowingDotsBackground from "@/app/_components/_backgrounds/GlowingDotsBackground";
+import ReportModal from "@/app/_components/_modals/ReportModal";
 import ShuffleLoader from "@/app/_components/ShuffleLoader";
 import StackedNotification from "@/app/_components/StackedNotification";
 
@@ -188,59 +188,6 @@ const shuffleOptions = (questions: QuestionType[]): QuestionType[] => {
   }));
 };
 
-// Report Modal Component
-const ReportModal = ({ isOpen, onClose, onConfirm, isSubmitting }: { isOpen: boolean; onClose: () => void; onConfirm: () => void; isSubmitting: boolean }) => {
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
-
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md z-50"
-          >
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl mx-4">
-              {/* Icon */}
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border-1 border-yellow-500">
-                <IoWarningSharp className="h-6 w-6 text-yellow-500" />
-              </div>
-
-              {/* Title */}
-              <h3 className="text-xl font-bold text-zinc-100 text-center mb-2">Report Misinformation?</h3>
-
-              {/* Description */}
-              <p className="text-zinc-400 text-center mb-6">Are you sure you want to report this question for misinformation? This question will be hidden from all users.</p>
-
-              {/* Buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={onClose}
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg font-medium transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={onConfirm}
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  {isSubmitting ? "Reporting..." : "Report Question"}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-};
-
 const Questions: FC<FinalQuestionsType & { showNotification: (msg: string) => void }> = ({
   multipleChoiceQuestions,
   isSubmitted,
@@ -259,30 +206,8 @@ const Questions: FC<FinalQuestionsType & { showNotification: (msg: string) => vo
   const [selectedMultipleChoice, setSelectedMultipleChoice] = useState<QuestionType[]>([]);
   const [answers, setAnswers] = useState<Record<string, number[]>>({});
   const [loading, setLoading] = useState<boolean>(true);
-  const [userId, setUserId] = useState<string>("");
-  const [userName, setUserName] = useState<string>("");
   const [showReportModal, setShowReportModal] = useState<boolean>(false);
   const [reportingQuestionId, setReportingQuestionId] = useState<string | null>(null);
-  const [submittingReport, setSubmittingReport] = useState<boolean>(false);
-
-  useEffect(() => {
-    const getUserData = async () => {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        setUserId(user.id);
-
-        const { data: profile } = await supabase.from("user_profiles").select("name").eq("id", user.id).single();
-
-        setUserName(profile?.name || user.email || "Anonymous");
-      }
-    };
-
-    getUserData();
-  }, []);
 
   useEffect(() => {
     // Simulate loading time for question preparation
@@ -374,47 +299,13 @@ const Questions: FC<FinalQuestionsType & { showNotification: (msg: string) => vo
     setShowReportModal(true);
   };
 
-  const handleReportQuestion = async () => {
-    if (!userId || !reportingQuestionId) return;
+  const handleReportSuccess = () => {
+    showNotification("Question reported successfully. It will be excluded from future exams.");
+    setShowReportModal(false);
 
-    setSubmittingReport(true);
-
-    try {
-      const response = await fetch(`/api/exam-questions/${reportingQuestionId}/report`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          reporterUserId: userId,
-          reporterName: userName,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        console.error("Error submitting report:", data.error);
-        showNotification(data.error || "Failed to report question");
-        setSubmittingReport(false);
-        setShowReportModal(false);
-        return;
-      }
-
-      showNotification("Question reported successfully. It will be excluded from future exams.");
-
-      // Remove the question from the current exam view
-      setSelectedMultipleChoice((prev) => prev.filter((q) => q.id !== reportingQuestionId));
-
-      setShowReportModal(false);
-      setSubmittingReport(false);
-      setReportingQuestionId(null);
-    } catch (error) {
-      console.error("Error in handleReportQuestion:", error);
-      showNotification("Failed to report question");
-      setSubmittingReport(false);
-      setShowReportModal(false);
-    }
+    // Remove the question from the current exam view
+    setSelectedMultipleChoice((prev) => prev.filter((q) => q.id !== reportingQuestionId));
+    setReportingQuestionId(null);
   };
 
   if (loading) {
@@ -550,7 +441,7 @@ const Questions: FC<FinalQuestionsType & { showNotification: (msg: string) => vo
       </div>
 
       {/* Report Modal */}
-      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} onConfirm={handleReportQuestion} isSubmitting={submittingReport} />
+      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} onSuccess={handleReportSuccess} reportType="exam-question" itemId={reportingQuestionId || ""} />
     </section>
   );
 };

@@ -32,7 +32,7 @@ const BasicFAQ = () => {
             <li>Added flash cards and exams to navbar for better navigation.</li>
           </ul>
 
-          <h4>Minor Changes</h4>
+          <h4 className="mt-10">Minor Changes</h4>
           <ul>
             <li>Removed Kanban option from mobile devices (currently not accessible on mobile).</li>
             <li>Made flash cards while reviewing slightly smaller.</li>
@@ -41,13 +41,13 @@ const BasicFAQ = () => {
             <li>Added loading icon while grades are being reset for flash cards.</li>
           </ul>
 
-          <h4>Bug Fixes</h4>
+          <h4 className="mt-10">Bug Fixes</h4>
           <ul>
             <li>Fixed how resetting grades for flash cards, reset all flash cards everywhere. Now it only resets the flash cards in the current chapter or week.</li>
           </ul>
         </Question>
 
-        <Question title="November 4th, 2025" defaultOpen>
+        <Question title="November 4th, 2025">
           <p>Added the &quot;Updates&quot; page. Also added the ability for users to report flash cards and exam questions with misinformation.</p>
         </Question>
 

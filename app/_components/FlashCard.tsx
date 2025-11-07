@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { IoWarningSharp } from "react-icons/io5";
 
 import Navbar from "@/app/_components/Navbar";
 import GlowingDotsBackground from "@/app/_components/_backgrounds/GlowingDotsBackground";
+import ReportModal from "@/app/_components/_modals/ReportModal";
 import ShuffleLoader from "@/app/_components/ShuffleLoader";
 import StackedNotification from "@/app/_components/StackedNotification";
 
@@ -479,59 +480,6 @@ const FlashCardSkeleton = () => {
   );
 };
 
-// Report Modal Component
-const ReportModal = ({ isOpen, onClose, onConfirm, isSubmitting }: { isOpen: boolean; onClose: () => void; onConfirm: () => void; isSubmitting: boolean }) => {
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
-
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md z-50"
-          >
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl mx-4">
-              {/* Icon */}
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border-1 border-yellow-500">
-                <IoWarningSharp className="h-6 w-6 text-yellow-500" />
-              </div>
-
-              {/* Title */}
-              <h3 className="text-xl font-bold text-zinc-100 text-center mb-2">Report Misinformation?</h3>
-
-              {/* Description */}
-              <p className="text-zinc-400 text-center mb-6">Are you sure you want to report this card for misinformation? This card will be hidden from all users.</p>
-
-              {/* Buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={onClose}
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg font-medium transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={onConfirm}
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  {isSubmitting ? "Reporting..." : "Report Card"}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-};
-
 const ReviewMode = ({
   card,
   onDifficultySelect,
@@ -552,32 +500,11 @@ const ReviewMode = ({
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
   const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
   const [showReportModal, setShowReportModal] = useState<boolean>(false);
-  const [submittingReport, setSubmittingReport] = useState<boolean>(false);
-  const [userId, setUserId] = useState<string>("");
-  const [userName, setUserName] = useState<string>("");
+  const [reportingCardId, setReportingCardId] = useState<string>("");
 
   useEffect(() => {
     setIsFlipped(false);
   }, [currentIndex]);
-
-  useEffect(() => {
-    const getUserData = async () => {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        setUserId(user.id);
-
-        const { data: profile } = await supabase.from("user_profiles").select("name").eq("id", user.id).single();
-
-        setUserName(profile?.name || user.email || "Anonymous");
-      }
-    };
-
-    getUserData();
-  }, []);
 
   const handleDifficultySelect = async (difficulty: string) => {
     setIsFlipped(false);
@@ -590,53 +517,23 @@ const ReviewMode = ({
     }, 1000);
   };
 
-  const handleReportCard = async () => {
-    if (!userId || !card) return;
+  const handleReportClick = (cardId: string) => {
+    setReportingCardId(cardId);
+    setShowReportModal(true);
+  };
 
-    setSubmittingReport(true);
+  const handleReportSuccess = async () => {
+    setNotifMessage("Card reported successfully and hidden from all users");
+    setIsNotifOpen(true);
+    setShowReportModal(false);
 
-    try {
-      const response = await fetch(`/api/flash-cards/${card.id}/report`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          reporterUserId: userId,
-          reporterName: userName,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        console.error("Error submitting report:", data.error);
-        setNotifMessage(data.error || "Failed to report card");
-        setIsNotifOpen(true);
-        setSubmittingReport(false);
-        setShowReportModal(false);
-        return;
-      }
-
-      setNotifMessage("Card reported successfully and hidden from all users");
-      setIsNotifOpen(true);
-      setShowReportModal(false);
-      setSubmittingReport(false);
-
-      // Move to next card or cancel review
-      if (currentIndex < totalCards - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        onDifficultySelect("skip");
-      } else {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        onCancel();
-      }
-    } catch (error) {
-      console.error("Error in handleReportCard:", error);
-      setNotifMessage("Failed to report card");
-      setIsNotifOpen(true);
-      setSubmittingReport(false);
-      setShowReportModal(false);
+    // Move to next card or cancel review
+    if (currentIndex < totalCards - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      onDifficultySelect("skip");
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      onCancel();
     }
   };
 
@@ -667,7 +564,7 @@ const ReviewMode = ({
 
       {/* Report button */}
       <button
-        onClick={() => setShowReportModal(true)}
+        onClick={() => handleReportClick(card.id)}
         className="absolute top-4 sm:top-8 left-24 sm:left-36 bg-transparent hover:bg-yellow-600 text-yellow-600 hover:text-slate-100 font-medium py-2 px-4 sm:px-6 border-1 border-yellow-600 rounded-lg transition-all duration-300 active:scale-95 cursor-pointer z-10 ml-4 md:ml-0"
         title="Report misinformation"
       >
@@ -680,7 +577,7 @@ const ReviewMode = ({
       </div>
 
       {/* Report Modal */}
-      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} onConfirm={handleReportCard} isSubmitting={submittingReport} />
+      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} onSuccess={handleReportSuccess} reportType="flash-card" itemId={reportingCardId} />
 
       {/* Big Card or Skeleton - with reserved space for buttons */}
       <div className="flex flex-col items-center w-full max-w-xs sm:max-w-sm md:max-w-md">
@@ -865,28 +762,7 @@ const FlashCard = ({
 }) => {
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
   const [showReportModal, setShowReportModal] = useState<boolean>(false);
-  const [submittingReport, setSubmittingReport] = useState<boolean>(false);
-  const [userId, setUserId] = useState<string>("");
-  const [userName, setUserName] = useState<string>("");
-
-  useEffect(() => {
-    const getUserData = async () => {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        setUserId(user.id);
-
-        const { data: profile } = await supabase.from("user_profiles").select("name").eq("id", user.id).single();
-
-        setUserName(profile?.name || user.email || "Anonymous");
-      }
-    };
-
-    getUserData();
-  }, []);
+  const [reportingCardId, setReportingCardId] = useState<string>("");
 
   const handleClick = (e: React.MouseEvent) => {
     // Don't flip if clicking the report button
@@ -896,50 +772,20 @@ const FlashCard = ({
     setIsFlipped(!isFlipped);
   };
 
-  const handleReportCard = async () => {
-    if (!userId || !id) return;
+  const handleReportClick = () => {
+    setReportingCardId(id);
+    setShowReportModal(true);
+  };
 
-    setSubmittingReport(true);
+  const handleReportSuccess = () => {
+    setNotifMessage("Card reported successfully and hidden from all users");
+    setIsNotifOpen(true);
+    setShowReportModal(false);
 
-    try {
-      const response = await fetch(`/api/flash-cards/${id}/report`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          reporterUserId: userId,
-          reporterName: userName,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        console.error("Error submitting report:", data.error);
-        setNotifMessage(data.error || "Failed to report card");
-        setIsNotifOpen(true);
-        setSubmittingReport(false);
-        setShowReportModal(false);
-        return;
-      }
-
-      setNotifMessage("Card reported successfully and hidden from all users");
-      setIsNotifOpen(true);
-      setShowReportModal(false);
-      setSubmittingReport(false);
-
-      // Remove the card from view by refreshing the list
-      setTimeout(() => {
-        onCardHidden();
-      }, 1000);
-    } catch (error) {
-      console.error("Error in handleReportCard:", error);
-      setNotifMessage("Failed to report card");
-      setIsNotifOpen(true);
-      setSubmittingReport(false);
-      setShowReportModal(false);
-    }
+    // Remove the card from view by refreshing the list
+    setTimeout(() => {
+      onCardHidden();
+    }, 1000);
   };
 
   return (
@@ -949,7 +795,7 @@ const FlashCard = ({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setShowReportModal(true);
+            handleReportClick();
           }}
           className="absolute top-2 right-2 z-10 bg-zinc-900/80 hover:bg-yellow-600 text-yellow-500 hover:text-white p-2 rounded-lg transition-all duration-200 backdrop-blur-sm cursor-pointer"
           title="Report misinformation"
@@ -1007,7 +853,7 @@ const FlashCard = ({
       </div>
 
       {/* Report Modal */}
-      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} onConfirm={handleReportCard} isSubmitting={submittingReport} />
+      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} onSuccess={handleReportSuccess} reportType="flash-card" itemId={reportingCardId} />
     </>
   );
 };

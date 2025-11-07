@@ -491,6 +491,8 @@ const ReportCard = ({
 
   const recentlyEdited = isRecentlyEdited();
 
+  console.log(report);
+
   return (
     <>
       <div className={`bg-zinc-900 border rounded-lg p-6 transition-colors ${recentlyEdited ? "border-emerald-500 shadow-lg shadow-emerald-500/20" : "border-zinc-800 hover:border-zinc-700"}`}>
@@ -511,8 +513,8 @@ const ReportCard = ({
           <span className="px-3 py-1 bg-zinc-800 text-zinc-300 rounded-full text-xs font-medium">{getReportTypeLabel(report.report_type)}</span>
         </div>
 
-        {/* Report Message (if exists) */}
-        {report.report_message && (
+        {/* Flash Card (if exists) */}
+        {report.report_type === "exam_question" && (
           <div className="mb-4 p-4 bg-zinc-800 rounded-lg border border-zinc-700">
             <p className="text-sm font-semibold text-zinc-400 mb-2">Message:</p>
             <p className="text-white whitespace-pre-wrap">{report.report_message}</p>

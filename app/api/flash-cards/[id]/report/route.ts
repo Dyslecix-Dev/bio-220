@@ -7,10 +7,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const { id } = await params;
     const body = await request.json();
-    const { reporterUserId, reporterName } = body;
+    const { reporterUserId, reporterName, message } = body;
 
     if (!reporterUserId || !reporterName) {
       return NextResponse.json({ success: false, error: "Missing reporter information" }, { status: 400 });
+    }
+
+    if (!message || !message.trim()) {
+      return NextResponse.json({ success: false, error: "Report description is required" }, { status: 400 });
     }
 
     // Verify the flash card exists and is not already hidden
@@ -24,17 +28,21 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ success: false, error: "Flash card is already hidden" }, { status: 400 });
     }
 
-    // Insert report
-    const { error: reportError } = await supabase.from("reports").insert({
-      reporter_user_id: reporterUserId,
-      reporter_name: reporterName,
-      report_type: "flash_card",
-      reported_item_id: id,
-    });
+    // Insert report into reports table (no separate reports table)
+    const { error: reportError } = await supabase
+      .from("reports")
+      .insert({
+        reporter_user_id: reporterUserId,
+        reporter_name: reporterName,
+        report_type: "flash_card",
+        report_message: message.trim(),
+        reported_item_id: id,
+      })
+      .eq("id", id);
 
     if (reportError) {
-      console.error("Error creating report:", reportError);
-      return NextResponse.json({ success: false, error: "Failed to create report" }, { status: 500 });
+      console.error("Error reporting and hiding exam question:", reportError);
+      return NextResponse.json({ success: false, error: reportError }, { status: 500 });
     }
 
     // Hide the flash card

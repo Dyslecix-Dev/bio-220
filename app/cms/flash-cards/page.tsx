@@ -6,9 +6,10 @@ import { useState, useEffect } from "react";
 import { FiEdit2, FiX, FiSearch } from "react-icons/fi";
 import { IoWarningSharp } from "react-icons/io5";
 
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 
 import Navbar from "@/app/_components/Navbar";
+import ReportModal from "@/app/_components/_modals/ReportModal";
 import ShuffleLoader from "@/app/_components/ShuffleLoader";
 import StackedNotification from "@/app/_components/StackedNotification";
 
@@ -21,7 +22,6 @@ export default function CMSFlashCards() {
   const [error, setError] = useState<string | null>(null);
   const [flashCards, setFlashCards] = useState<FlashCardType[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string>("");
 
   // Notification state
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -31,10 +31,6 @@ export default function CMSFlashCards() {
     setNotifMessage(message);
     setIsNotifOpen(true);
   };
-
-  useEffect(() => {
-    fetchFlashCards();
-  }, []);
 
   const fetchFlashCards = async () => {
     try {
@@ -51,11 +47,6 @@ export default function CMSFlashCards() {
       }
 
       setCurrentUserId(user.id);
-
-      // Get user profile for name
-      const { data: profile } = await supabase.from("user_profiles").select("name").eq("id", user.id).single();
-
-      setUserName(profile?.name || user.email || "Anonymous");
 
       const { data, error } = await supabase
         .from("flash_cards")
@@ -100,6 +91,10 @@ export default function CMSFlashCards() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchFlashCards();
+  }, []);
 
   const handleDeleteCard = async (cardId: string) => {
     try {
@@ -166,40 +161,9 @@ export default function CMSFlashCards() {
     }
   };
 
-  const handleReportCard = async (cardId: string) => {
-    if (!currentUserId) {
-      showNotification("You must be logged in to report cards");
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/flash-cards/${cardId}/report`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          reporterUserId: currentUserId,
-          reporterName: userName,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        console.error("Error submitting report:", data.error);
-        showNotification(data.error || "Failed to report card");
-        return;
-      }
-
-      showNotification("Card reported successfully and hidden from all users");
-
-      // Remove the card from view
-      setFlashCards((prevCards) => prevCards.filter((card) => card.id !== cardId));
-    } catch (error) {
-      console.error("Error in handleReportCard:", error);
-      showNotification("Failed to report card");
-    }
+  const handleReportSuccess = () => {
+    showNotification("Card reported successfully and hidden from all users");
+    fetchFlashCards();
   };
 
   // Group cards by topic
@@ -222,31 +186,25 @@ export default function CMSFlashCards() {
     const aIsLab = aLower.includes("lab");
     const bIsLab = bLower.includes("lab");
 
-    // Lecture comes first
     if (aIsLecture && !bIsLecture) return -1;
     if (!aIsLecture && bIsLecture) return 1;
 
-    // If both are lectures, sort numerically
     if (aIsLecture && bIsLecture) {
       return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
     }
 
-    // Lab comes second (with numeric sorting)
     if (aIsLab && !bIsLab) return -1;
     if (!aIsLab && bIsLab) return 1;
 
-    // If both are labs, sort numerically
     if (aIsLab && bIsLab) {
       return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
     }
 
-    // Otherwise alphabetical
     return a.localeCompare(b);
   });
 
   sortedTopics.forEach((topic) => {
     groupedCards[topic].sort((a, b) => {
-      // Sort by created_at date (newest first)
       const dateA = new Date(a.created_at || 0).getTime();
       const dateB = new Date(b.created_at || 0).getTime();
       return dateB - dateA;
@@ -283,11 +241,10 @@ export default function CMSFlashCards() {
         </div>
 
         {sortedTopics.map((topic) => (
-          <TopicSection key={topic} topic={topic} cards={groupedCards[topic]} onDeleteCard={handleDeleteCard} onReportCard={handleReportCard} currentUserId={currentUserId} />
+          <TopicSection key={topic} topic={topic} cards={groupedCards[topic]} onDeleteCard={handleDeleteCard} onReportSuccess={handleReportSuccess} currentUserId={currentUserId} />
         ))}
       </section>
 
-      {/* Notification Component */}
       <StackedNotification isNotifOpen={isNotifOpen} setIsNotifOpen={setIsNotifOpen} message={notifMessage} />
     </main>
   );
@@ -297,13 +254,13 @@ const TopicSection = ({
   topic,
   cards,
   onDeleteCard,
-  onReportCard,
+  onReportSuccess,
   currentUserId,
 }: {
   topic: string;
   cards: FlashCardType[];
   onDeleteCard: (cardId: string) => void;
-  onReportCard: (cardId: string) => void;
+  onReportSuccess: () => void;
   currentUserId: string | null;
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -321,9 +278,7 @@ const TopicSection = ({
 
   const formatTopic = (topic: string) => {
     let formattedTopic = topic.replace("-", " ");
-
     formattedTopic = formattedTopic.charAt(0).toUpperCase() + formattedTopic.slice(1);
-
     return formattedTopic;
   };
 
@@ -353,81 +308,27 @@ const TopicSection = ({
 
       <div className="flex gap-4 overflow-x-auto pb-4">
         {filteredCards.map((card) => (
-          <FlipCard key={card.id} card={card} onDeleteCard={onDeleteCard} onReportCard={onReportCard} currentUserId={currentUserId} />
+          <FlipCard key={card.id} card={card} onDeleteCard={onDeleteCard} onReportSuccess={onReportSuccess} currentUserId={currentUserId} />
         ))}
       </div>
     </div>
   );
 };
 
-// Report Modal Component
-const ReportModal = ({ isOpen, onClose, onConfirm, isSubmitting }: { isOpen: boolean; onClose: () => void; onConfirm: () => void; isSubmitting: boolean }) => {
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
-
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md z-50"
-          >
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl mx-4">
-              {/* Icon */}
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border-1 border-yellow-500">
-                <IoWarningSharp className="h-6 w-6 text-yellow-500" />
-              </div>
-
-              {/* Title */}
-              <h3 className="text-xl font-bold text-zinc-100 text-center mb-2">Report Misinformation?</h3>
-
-              {/* Description */}
-              <p className="text-zinc-400 text-center mb-6">Are you sure you want to report this card for misinformation? This card will be hidden from all users.</p>
-
-              {/* Buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={onClose}
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer duration-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={onConfirm}
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer duration-300"
-                >
-                  {isSubmitting ? "Reporting..." : "Report Card"}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-};
-
 const FlipCard = ({
   card,
   onDeleteCard,
-  onReportCard,
+  onReportSuccess,
   currentUserId,
 }: {
   card: FlashCardType;
   onDeleteCard: (cardId: string) => void;
-  onReportCard: (cardId: string) => void;
+  onReportSuccess: () => void;
   currentUserId: string | null;
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [submittingReport, setSubmittingReport] = useState(false);
 
   const isOwner = currentUserId === card.user_id;
 
@@ -455,11 +356,9 @@ const FlipCard = ({
     setShowReportModal(true);
   };
 
-  const confirmReport = async () => {
-    setSubmittingReport(true);
-    await onReportCard(card.id);
-    setSubmittingReport(false);
+  const handleLocalReportSuccess = () => {
     setShowReportModal(false);
+    onReportSuccess();
   };
 
   return (
@@ -558,7 +457,7 @@ const FlipCard = ({
       )}
 
       {/* Report Modal */}
-      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} onConfirm={confirmReport} isSubmitting={submittingReport} />
+      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} onSuccess={handleLocalReportSuccess} reportType="flash-card" itemId={card.id} />
     </>
   );
 };

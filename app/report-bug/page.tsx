@@ -178,7 +178,7 @@ export default function ReportBug() {
             <div className="flex gap-4">
               <button
                 type="button"
-                onClick={() => router.push("/dashboard")}
+                onClick={() => router.push("/")}
                 className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-6 py-3 font-medium text-zinc-300 transition-colors duration-300 hover:bg-zinc-700 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                 disabled={submitting}
               >

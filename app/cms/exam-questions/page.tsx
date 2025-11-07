@@ -8,6 +8,7 @@ import { IoWarningSharp } from "react-icons/io5";
 import { motion, AnimatePresence } from "motion/react";
 
 import Navbar from "@/app/_components/Navbar";
+import ReportModal from "@/app/_components/_modals/ReportModal";
 import ShuffleLoader from "@/app/_components/ShuffleLoader";
 import StackedNotification from "@/app/_components/StackedNotification";
 
@@ -34,7 +35,6 @@ export default function CMSExamQuestions() {
   const [error, setError] = useState<string | null>(null);
   const [examQuestions, setExamQuestions] = useState<ExamQuestionType[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string>("");
   const [isNotifOpen, setIsNotifOpen] = useState<boolean>(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -42,10 +42,6 @@ export default function CMSExamQuestions() {
     setMessage(msg);
     setIsNotifOpen(true);
   };
-
-  useEffect(() => {
-    fetchExamQuestions();
-  }, []);
 
   const fetchExamQuestions = async () => {
     try {
@@ -63,11 +59,6 @@ export default function CMSExamQuestions() {
 
       setCurrentUserId(user.id);
 
-      // Get user profile for name
-      const { data: profile } = await supabase.from("user_profiles").select("name").eq("id", user.id).single();
-
-      setUserName(profile?.name || user.email || "Anonymous");
-
       const { data, error } = await supabase.from("exam_questions").select("*").eq("is_hidden", false).order("exam_type", { ascending: true }).order("exam_number", { ascending: true });
 
       if (error) {
@@ -83,6 +74,10 @@ export default function CMSExamQuestions() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchExamQuestions();
+  }, []);
 
   const handleDeleteQuestion = async (questionId: string) => {
     try {
@@ -124,40 +119,9 @@ export default function CMSExamQuestions() {
     }
   };
 
-  const handleReportQuestion = async (questionId: string) => {
-    if (!currentUserId) {
-      showNotification("You must be logged in to report questions");
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/exam-questions/${questionId}/report`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          reporterUserId: currentUserId,
-          reporterName: userName,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        console.error("Error submitting report:", data.error);
-        showNotification(data.error || "Failed to report question");
-        return;
-      }
-
-      showNotification("Question reported successfully and hidden from all users");
-
-      // Remove the question from view
-      setExamQuestions((prevQuestions) => prevQuestions.filter((q) => q.id !== questionId));
-    } catch (error) {
-      console.error("Error in handleReportQuestion:", error);
-      showNotification("Failed to report question");
-    }
+  const handleReportSuccess = () => {
+    showNotification("Question reported successfully and hidden from all users");
+    fetchExamQuestions();
   };
 
   // Group questions by exam type and number
@@ -182,12 +146,10 @@ export default function CMSExamQuestions() {
     const [typeA, numA] = a.split("-");
     const [typeB, numB] = b.split("-");
 
-    // If different types, lecture comes before lab
     if (typeA !== typeB) {
       return typeA === "lecture" ? -1 : 1;
     }
 
-    // Same type, sort by exam number
     return parseInt(numA) - parseInt(numB);
   });
 
@@ -221,7 +183,7 @@ export default function CMSExamQuestions() {
         </div>
 
         {sortedGroups.map((group) => (
-          <ExamGroup key={group} groupName={group} questions={groupedQuestions[group]} onDeleteQuestion={handleDeleteQuestion} onReportQuestion={handleReportQuestion} currentUserId={currentUserId} />
+          <ExamGroup key={group} groupName={group} questions={groupedQuestions[group]} onDeleteQuestion={handleDeleteQuestion} onReportSuccess={handleReportSuccess} currentUserId={currentUserId} />
         ))}
       </section>
 
@@ -234,13 +196,13 @@ const ExamGroup = ({
   groupName,
   questions,
   onDeleteQuestion,
-  onReportQuestion,
+  onReportSuccess,
   currentUserId,
 }: {
   groupName: string;
   questions: ExamQuestionType[];
   onDeleteQuestion: (questionId: string) => void;
-  onReportQuestion: (questionId: string) => void;
+  onReportSuccess: () => void;
   currentUserId: string | null;
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -306,7 +268,7 @@ const ExamGroup = ({
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }} className="overflow-hidden">
             <div className="mt-4 space-y-4">
               {filteredQuestions.map((question) => (
-                <QuestionCard key={question.id} question={question} onDeleteQuestion={onDeleteQuestion} onReportQuestion={onReportQuestion} currentUserId={currentUserId} />
+                <QuestionCard key={question.id} question={question} onDeleteQuestion={onDeleteQuestion} onReportSuccess={onReportSuccess} currentUserId={currentUserId} />
               ))}
             </div>
           </motion.div>
@@ -316,73 +278,19 @@ const ExamGroup = ({
   );
 };
 
-// Report Modal Component
-const ReportModal = ({ isOpen, onClose, onConfirm, isSubmitting }: { isOpen: boolean; onClose: () => void; onConfirm: () => void; isSubmitting: boolean }) => {
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" />
-
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md z-50"
-          >
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl mx-4">
-              {/* Icon */}
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border-1 border-yellow-500">
-                <IoWarningSharp className="h-6 w-6 text-yellow-500" />
-              </div>
-
-              {/* Title */}
-              <h3 className="text-xl font-bold text-zinc-100 text-center mb-2">Report Misinformation?</h3>
-
-              {/* Description */}
-              <p className="text-zinc-400 text-center mb-6">Are you sure you want to report this question for misinformation? This question will be hidden from all users.</p>
-
-              {/* Buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={onClose}
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg font-medium transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={onConfirm}
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  {isSubmitting ? "Reporting..." : "Report Question"}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-};
-
 const QuestionCard = ({
   question,
   onDeleteQuestion,
-  onReportQuestion,
+  onReportSuccess,
   currentUserId,
 }: {
   question: ExamQuestionType;
   onDeleteQuestion: (questionId: string) => void;
-  onReportQuestion: (questionId: string) => void;
+  onReportSuccess: () => void;
   currentUserId: string | null;
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [submittingReport, setSubmittingReport] = useState(false);
 
   const isOwner = currentUserId === question.user_id;
 
@@ -403,11 +311,9 @@ const QuestionCard = ({
     setShowReportModal(true);
   };
 
-  const confirmReport = async () => {
-    setSubmittingReport(true);
-    await onReportQuestion(question.id);
-    setSubmittingReport(false);
+  const handleLocalReportSuccess = () => {
     setShowReportModal(false);
+    onReportSuccess();
   };
 
   const correctAnswers = question.options.filter((opt) => opt.correct).length;
@@ -477,7 +383,7 @@ const QuestionCard = ({
       )}
 
       {/* Report Modal */}
-      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} onConfirm={confirmReport} isSubmitting={submittingReport} />
+      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} onSuccess={handleLocalReportSuccess} reportType="exam-question" itemId={question.id} />
     </>
   );
 };

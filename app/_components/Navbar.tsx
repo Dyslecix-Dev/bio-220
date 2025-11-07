@@ -12,6 +12,7 @@ import { createClient } from "@/utils/supabase/client";
 
 export default function Navbar() {
   const [userID, setUserID] = useState<string>("");
+  const [userEmail, setUserEmail] = useState<string>("");
   const [userAdmin, setUserAdmin] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
@@ -38,6 +39,7 @@ export default function Navbar() {
 
         if (user) {
           setUserID(user.id);
+          setUserEmail(user.email || "");
         }
 
         if (userProfile) {
@@ -90,10 +92,10 @@ export default function Navbar() {
       <div className="mx-auto flex max-w-7xl items-center justify-between">
         <Logo />
         <div className="hidden gap-6 lg:flex">
-          {isLoading ? <NavbarLoadingSkeleton /> : <Links userAdmin={userAdmin} />}
+          {isLoading ? <NavbarLoadingSkeleton /> : <Links userAdmin={userAdmin} userEmail={userEmail} />}
           <LogoutButton onClick={signOut} isLoading={isLoading} />
         </div>
-        <MobileMenu onClick={signOut} userAdmin={userAdmin} isLoading={isLoading} />
+        <MobileMenu onClick={signOut} userAdmin={userAdmin} userEmail={userEmail} isLoading={isLoading} />
       </div>
     </nav>
   );
@@ -124,8 +126,17 @@ const NavbarLoadingSkeleton = () => {
   );
 };
 
-const Links = ({ userAdmin }: { userAdmin: string }) => {
-  const links = LINKS.filter((link) => {
+const Links = ({ userAdmin, userEmail }: { userAdmin: string; userEmail: string }) => {
+  const links = LINKS.map((link) => {
+    if (link.text === "Admin" && userAdmin === "admin") {
+      return {
+        ...link,
+        FlyoutContent: () => <AdminFlyout userEmail={userEmail} />,
+        FoldContent: () => <AdminMobileFold userEmail={userEmail} />,
+      };
+    }
+    return link;
+  }).filter((link) => {
     if (link.text === "Admin") {
       return userAdmin === "admin";
     }
@@ -187,6 +198,48 @@ const NavLink = ({ children, href, FlyoutContent }: { children: ReactNode; href:
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+};
+
+const AdminFlyout = ({ userEmail }: { userEmail: string }) => {
+  const showReports = userEmail === "dyslecixdev@gmail.com";
+
+  return (
+    <div className="w-48 bg-white p-6 shadow-xl">
+      <div className="space-y-2">
+        <Link href="/cms/flash-cards" className="block rounded px-4 py-2 text-sm transition-colors hover:bg-indigo-100">
+          Flash Cards
+        </Link>
+        <Link href="/cms/exam-questions" className="block rounded px-4 py-2 text-sm transition-colors hover:bg-indigo-100">
+          Exam Questions
+        </Link>
+        {showReports && (
+          <a href="/cms/reports" className="block rounded px-4 py-2 text-sm transition-colors hover:bg-indigo-100">
+            Reports
+          </a>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const AdminMobileFold = ({ userEmail }: { userEmail: string }) => {
+  const showReports = userEmail === "dyslecixdev@gmail.com";
+
+  return (
+    <div className="ml-4 space-y-2">
+      <Link href="/cms/flash-cards" className="block rounded bg-white px-4 py-2 text-sm transition-colors hover:bg-indigo-100">
+        Flash Cards
+      </Link>
+      <Link href="/cms/exam-questions" className="block rounded bg-white px-4 py-2 text-sm transition-colors hover:bg-indigo-100">
+        Exam Questions
+      </Link>
+      {showReports && (
+        <a href="/cms/reports" className="block rounded bg-white px-4 py-2 text-sm transition-colors hover:bg-indigo-100">
+          Reports
+        </a>
+      )}
     </div>
   );
 };
@@ -364,10 +417,19 @@ const ExamsMobileFold = () => {
   );
 };
 
-const MobileMenu = ({ onClick: signOut, userAdmin, isLoading }: { onClick: () => void; userAdmin: string; isLoading: boolean }) => {
+const MobileMenu = ({ onClick: signOut, userAdmin, userEmail, isLoading }: { onClick: () => void; userAdmin: string; userEmail: string; isLoading: boolean }) => {
   const [open, setOpen] = useState(false);
 
-  const links = LINKS.filter((link) => {
+  const links = LINKS.map((link) => {
+    if (link.text === "Admin" && userAdmin === "admin") {
+      return {
+        ...link,
+        FlyoutContent: () => <AdminFlyout userEmail={userEmail} />,
+        FoldContent: () => <AdminMobileFold userEmail={userEmail} />,
+      };
+    }
+    return link;
+  }).filter((link) => {
     if (link.text === "Admin") {
       return userAdmin === "admin";
     }
